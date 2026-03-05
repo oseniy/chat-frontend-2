@@ -1,5 +1,7 @@
 "use client";
 
+// Импортируем стор звонков
+import { useCallStore } from "@/entities/call/model/useCallStore";
 import { MappedChatDetails } from "@/entities/chat/lib/mapChat";
 import { UserPreview } from "@/entities/user/model/types";
 import { normalizeChatInfo } from "@/features/chat/chat/lib/normalizeChatInfo";
@@ -27,12 +29,23 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   chatKey,
   chatKeyUser,
 }) => {
-  // Приводит пришедшие данные к единому интерфейсу
+  // Достаем функцию начала звонка
+  const makeCall = useCallStore((state) => state.makeCall);
+
   const chatInfo = normalizeChatInfo(initialChatInfo);
 
-  // Единственное название чата в зависимости от типа
   const chatName = chatInfo.title || chatInfo.firstName || "Unknown";
   const chatAvatar = chatInfo.avatar || chatInfo.avatarUrl || "";
+
+  // Функция-обработчик клика по трубке
+  const handleCall = () => {
+    // В личных чатах используем chatKey или chatKeyUser как ID собеседника
+    const targetId = chatType === "chat" ? chatKeyUser || chatKey : chatKey;
+
+    if (targetId) {
+      makeCall(targetId);
+    }
+  };
 
   return (
     <div className={cn("desktop:h-full flex h-dvh w-full flex-col", className)}>
@@ -47,7 +60,8 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
           membersCount: chatInfo.membersCount,
           chatType: chatType,
         }}
-        onCallClick={() => {}}
+        // Передаем нашу функцию в хедер
+        onCallClick={handleCall}
         onSearchClick={() => {}}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
