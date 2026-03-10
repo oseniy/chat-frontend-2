@@ -5,6 +5,7 @@ import { Roboto } from "next/font/google";
 import localFont from "next/font/local";
 import { cookies } from "next/headers";
 
+import { CallSignalingProvider } from "@/entities/call/model/CallSignalingProvider";
 import { SITE_TITLE } from "@/shared/lib/constants/siteInfo";
 import { AuthProvider } from "@/shared/providers/authProvider";
 import { IsMobileProvider } from "@/shared/providers/isMobileProvider";
@@ -40,7 +41,9 @@ export default async function RootLayout({
       <body className={`${roboto.variable} ${appleColorEmoji.variable} font-sans antialiased`}>
         <AuthProvider initialToken={token}>
           <WSProvider>
-            <IsMobileProvider>{children}</IsMobileProvider>
+            <CallSignalingProvider>
+              <IsMobileProvider>{children}</IsMobileProvider>
+            </CallSignalingProvider>
           </WSProvider>
         </AuthProvider>
       </body>
