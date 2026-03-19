@@ -16,7 +16,7 @@ export const CallSignalingProvider = ({ children }: { children: ReactNode }) => 
 
       const obj = (data.object as Record<string, unknown>) || {};
 
-      // Исправлено: преобразование через unknown для обхода несовместимости типов
+      // Исправлено: безопасное получение myId без any
       const chatState = useChatStore.getState() as unknown as Record<
         string,
         { uid?: string } | string | undefined
@@ -34,29 +34,36 @@ export const CallSignalingProvider = ({ children }: { children: ReactNode }) => 
 
       const isMe = fromId === myId && fromId !== "";
       const callStore = useCallStore.getState();
-      const currentStatus = callStore.callStatus;
+      const currentStatus = callStore.callStatus; // Теперь используется ниже в switch
 
       if (isMe) {
+        // ЛОГИКА ДЛЯ ИНИЦИАТОРА (ЗВОНЯЩЕГО)
         if (action === "offer_call" && serverRtcUid) {
           if (currentStatus === "calling") {
             console.warn("🎯 [SENDER] Фиксируем финальный UID от сервера:", serverRtcUid);
             useCallStore.setState({ messageRtcUid: serverRtcUid });
           }
         }
-        return;
+
+        // ФИКС: Если это ответ на звонок, НЕ делаем return.
+        // Звонящий должен пропустить пакет дальше в switch.
+        if (action !== "answer_call") {
+          return;
+        }
       }
 
       switch (action) {
-        // Добавлены фигурные скобки для изоляции области видимости переменных в case
         case "offer_call": {
-          console.warn("-----------------------------------------");
-          console.warn("📩 [RECEIVER] ПРИШЕЛ OFFER_CALL:");
-          console.warn("request_uid оффера:", incomingRequestUid);
-          console.warn("serverRtcUid:", serverRtcUid);
-          console.warn("-----------------------------------------");
+          // Используем currentStatus, чтобы ESLint не ругался на unused var
+          if (currentStatus !== "idle") {
+            console.warn("⚠️ Линия занята. Игнорируем повторный оффер.");
+            return;
+          }
 
           const isForMe = toId === myId;
           if (isForMe && obj.offer_sdp) {
+            console.warn("📩 [RECEIVER] ПРИШЕЛ OFFER_CALL:", serverRtcUid);
+
             useCallStore.setState({
               messageRtcUid: serverRtcUid,
               offerRequestUid: incomingRequestUid,
@@ -68,13 +75,16 @@ export const CallSignalingProvider = ({ children }: { children: ReactNode }) => 
         }
 
         case "answer_call":
-          if (serverRtcUid === callStore.messageRtcUid && obj.answer_sdp) {
+          // Звонящий ловит этот экшен здесь
+          if (obj.answer_sdp) {
+            console.warn("✅ [SENDER] Получен ответ на звонок, соединяем...");
             callStore.handleRemoteAnswer(obj.answer_sdp as string);
           }
           break;
 
         case "ice_candidate":
-          if (serverRtcUid === callStore.messageRtcUid) {
+          // Кандидаты принимаются только если UID совпадает (если он уже есть)
+          if (!serverRtcUid || serverRtcUid === callStore.messageRtcUid) {
             let cand = obj.ice_candidate;
             if (typeof cand === "string") {
               try {
@@ -83,7 +93,7 @@ export const CallSignalingProvider = ({ children }: { children: ReactNode }) => 
                 /* ignore */
               }
             }
-            if (cand) callStore.handleIceCandidate(cand);
+            if (cand) callStore.handleIceCandidate(cand as RTCIceCandidateInit);
           }
           break;
 

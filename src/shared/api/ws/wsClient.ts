@@ -62,11 +62,6 @@ const attachHandlers = (ws: WebSocket) => {
     try {
       const data = JSON.parse(event.data) as WSBaseResponse<unknown>;
 
-      // Лог входящих звонков через warn (разрешено линтером)
-      if (data.action && (data.action as string).includes("call")) {
-        console.warn("📩 [WS INCOMING]:", JSON.stringify(data, null, 2));
-      }
-
       handlers.forEach((handler) => handler(data));
     } catch {
       console.warn("WS raw message:", event.data);
@@ -120,11 +115,6 @@ export const sendWSRequest = <TResponse>(
       request_uid,
       object: payload,
     };
-  }
-
-  // Лог через warn для прохождения ESLint
-  if (action.includes("call")) {
-    console.warn(`🚀 [WS OUTGOING] ${action.toUpperCase()}:`, JSON.stringify(message, null, 2));
   }
 
   const promise = useWSRequestStore

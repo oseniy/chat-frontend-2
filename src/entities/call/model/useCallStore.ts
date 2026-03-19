@@ -46,7 +46,6 @@ export const useCallStore = create<CallState>((set, get) => ({
   iceQueue: [],
 
   makeCall: async (toUserId, iceServers) => {
-    // Исправлено: заменили any на unknown + Record
     const chatState = useChatStore.getState() as unknown as Record<
       string,
       { uid?: string } | string | undefined
@@ -56,9 +55,17 @@ export const useCallStore = create<CallState>((set, get) => ({
     if (!toUserId || !myId) return;
 
     try {
+      // 1. Создаем экземпляр соединения
       const pc = new RTCPeerConnection({ iceServers });
+
+      // 2. СРАЗУ кладем его в стор, чтобы handleRemoteAnswer мог его найти
+      set({ pc, remoteUserId: toUserId, callStatus: "calling", iceQueue: [] });
+
       const localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+
+      // Обновляем стор стримом
+      set({ localStream });
 
       pc.onicecandidate = (event) => {
         const rtcUid = get().messageRtcUid;
@@ -71,22 +78,23 @@ export const useCallStore = create<CallState>((set, get) => ({
       };
 
       pc.ontrack = (e) => {
-        // e.streams — это массив, для srcObject нам нужен только сам объект потока
         if (e.streams && e.streams[0]) {
-          set({ remoteStream: e.streams[0] }); // Сохраняем ПЕРВЫЙ элемент напрямую
+          set({ remoteStream: e.streams[0] });
         }
       };
 
+      // 3. Создаем Offer
       const offer = await pc.createOffer();
+
+      // 4. Устанавливаем LocalDescription (состояние сменится со stable на have-local-offer)
       await pc.setLocalDescription(offer);
 
+      // 5. ТОЛЬКО ПОСЛЕ ЭТОГО отправляем сигнал на сервер
       callService.sendSignal("offer_call", myId, toUserId, "", {
         offer_sdp: offer.sdp,
       });
-
-      set({ pc, localStream, remoteUserId: toUserId, callStatus: "calling" });
     } catch (err) {
-      console.error("MakeCall Error", err);
+      console.warn("❌ MakeCall Error:", err);
       get().endCall(false);
     }
   },
@@ -194,9 +202,21 @@ export const useCallStore = create<CallState>((set, get) => ({
 
   handleRemoteAnswer: async (sdp) => {
     const { pc } = get();
-    if (pc) {
-      await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp }));
-      set({ callStatus: "connected" });
+
+    // Проверяем, что pc существует и он НЕ в состоянии stable
+    if (pc && pc.signalingState !== "stable") {
+      try {
+        await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp }));
+        set({ callStatus: "connected" });
+        console.warn("✅ [SENDER] Соединение установлено (connected)");
+      } catch (e) {
+        console.warn("❌ [SENDER] Ошибка setRemoteDescription:", e);
+      }
+    } else {
+      console.warn(
+        "⚠️ [SENDER] Пропуск answer: pc не готов или уже в stable. State:",
+        pc?.signalingState,
+      );
     }
   },
 
