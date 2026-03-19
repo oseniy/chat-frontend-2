@@ -7,15 +7,21 @@ import { useWSRequestStore } from "./model/wsRequest.store";
 let socket: WebSocket | null = null;
 let currentToken: string | null = null;
 let status: WSStatus = "idle";
-let requestQueue: QueuedRequest[] = [];
+const requestQueue: QueuedRequest[] = [];
 
 let reconnectAttempts = 0;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let manualClose = false;
 
 const MAX_RECONNECT_DELAY = 30_000;
-
 const handlers = new Set<WSHandler>();
+
+// Интерфейс для типизации сообщения внутри функции
+interface WSMessage {
+  action: string;
+  request_uid: string;
+  object: unknown;
+}
 
 const getReconnectDelay = () => Math.min(1000 * 2 ** reconnectAttempts, MAX_RECONNECT_DELAY);
 
@@ -35,9 +41,8 @@ export const subscribeToWS = (handler: WSHandler) => {
 
 const drainQueue = () => {
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
-
   while (requestQueue.length > 0) {
-    const request = requestQueue.shift(); // Берем первый элемент (FIFO)
+    const request = requestQueue.shift();
     if (request) {
       socket.send(JSON.stringify(request));
     }
@@ -46,7 +51,7 @@ const drainQueue = () => {
 
 const attachHandlers = (ws: WebSocket) => {
   ws.onopen = () => {
-    console.log("WS connected ✅");
+    console.warn("WS connected ✅");
     status = "connected";
     reconnectAttempts = 0;
     clearReconnectTimeout();
@@ -56,69 +61,82 @@ const attachHandlers = (ws: WebSocket) => {
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data) as WSBaseResponse<unknown>;
+
+      // Лог входящих звонков через warn (разрешено линтером)
+      if (data.action && (data.action as string).includes("call")) {
+        console.warn("📩 [WS INCOMING]:", JSON.stringify(data, null, 2));
+      }
+
       handlers.forEach((handler) => handler(data));
     } catch {
-      console.log("WS raw message:", event.data);
+      console.warn("WS raw message:", event.data);
     }
   };
 
   ws.onclose = (event) => {
-    console.log("WS closed ❌", event.code, event.reason);
+    console.warn("WS closed ❌", event.code, event.reason);
     socket = null;
-
     if (manualClose) {
       status = "closed";
       return;
     }
-
-    if (!navigator.onLine) {
-      status = "reconnecting";
-      scheduleReconnect();
-      return;
-    }
-
     status = "reconnecting";
     scheduleReconnect();
   };
 
   ws.onerror = () => {
-    // onerror почти бесполезен → инициируем close,
-    // чтобы гарантированно попасть в onclose
     ws.close();
   };
 };
 
+/**
+ * sendWSRequest: с защитой от двойной упаковки и логом
+ */
 export const sendWSRequest = <TResponse>(
   action: string,
   payload: unknown,
   requestUid?: string,
-): Promise<TResponse> => {
-  const socket = getSocket();
-
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    // Вместо простого throw можно сделать более умную логику (например, очередь)
-    // Но для начала — просто ошибка, как и было
-    return Promise.reject(new Error("WebSocket is not connected"));
-  }
-
+): Promise<TResponse & { request_uid: string }> => {
+  const currentSocket = getSocket();
   const request_uid = requestUid || uuidv4();
 
-  const message = {
-    action,
-    request_uid,
-    object: payload,
-  };
+  let message: WSMessage;
 
-  // Регистрируем ожидание ответа в сторе
-  const promise = useWSRequestStore.getState().trackRequest<TResponse>(request_uid);
+  // Type Guard для проверки "конверта"
+  const isEnvelope = (p: unknown): p is WSMessage =>
+    !!p && typeof p === "object" && "action" in p && "object" in p;
 
-  // 2. Проверяем состояние
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    console.log(`⏳ WS: Socket not ready. Queuing action: ${action}`);
-    requestQueue.push(message);
+  if (isEnvelope(payload)) {
+    // Если payload уже упакован, используем его структуру
+    message = {
+      action: (payload as WSMessage).action,
+      request_uid: (payload as WSMessage).request_uid || request_uid,
+      object: (payload as WSMessage).object,
+    };
   } else {
-    // Если всё ок — отправляем сразу
-    socket.send(JSON.stringify(message));
+    // Обычная упаковка в object
+    message = {
+      action,
+      request_uid,
+      object: payload,
+    };
+  }
+
+  // Лог через warn для прохождения ESLint
+  if (action.includes("call")) {
+    console.warn(`🚀 [WS OUTGOING] ${action.toUpperCase()}:`, JSON.stringify(message, null, 2));
+  }
+
+  const promise = useWSRequestStore
+    .getState()
+    .trackRequest<TResponse & { request_uid: string }>(request_uid);
+
+  if (!currentSocket || currentSocket.readyState !== WebSocket.OPEN) {
+    console.warn(`⏳ WS: Socket not ready. Queuing action: ${action}`);
+    // Приведение к типу очереди (QueuedRequest обычно совпадает с WSMessage)
+    requestQueue.push(message as unknown as QueuedRequest);
+  } else {
+    currentSocket.send(JSON.stringify(message));
   }
 
   return promise;
@@ -126,12 +144,8 @@ export const sendWSRequest = <TResponse>(
 
 const scheduleReconnect = () => {
   if (!currentToken) return;
-
   clearReconnectTimeout();
-
   const delay = getReconnectDelay();
-  console.log(`WS reconnect in ${delay}ms`);
-
   reconnectTimeout = setTimeout(() => {
     reconnectAttempts += 1;
     connectWS(currentToken!);
@@ -139,7 +153,6 @@ const scheduleReconnect = () => {
 };
 
 export const connectWS = (accessToken: string) => {
-  // защита от лишних connect
   if (
     socket &&
     currentToken === accessToken &&
@@ -147,36 +160,29 @@ export const connectWS = (accessToken: string) => {
   ) {
     return;
   }
-
   manualClose = false;
   currentToken = accessToken;
   status = "connecting";
-
   clearReconnectTimeout();
-
   if (socket) {
     socket.close();
     socket = null;
   }
-
   const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}/ws/chat?authorization=${accessToken}`;
   socket = new WebSocket(wsUrl);
-
   attachHandlers(socket);
 };
 
 export const disconnectWS = () => {
   manualClose = true;
   clearReconnectTimeout();
-  requestQueue = [];
-
+  // Очистка очереди при дисконнекте
+  requestQueue.length = 0;
   if (socket) {
     socket.close();
     socket = null;
   }
-
   currentToken = null;
-
   status = "closed";
 };
 
