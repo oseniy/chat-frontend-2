@@ -94,7 +94,6 @@ export const callService = {
     const finalRequestUid = uuidv4();
     sendWSRequest(action, objectPayload, finalRequestUid);
 
-    // Заменили на warn для прохождения проверки ESLint
     console.warn(`[CALL SERVICE] ${action.toUpperCase()} отправлен. RTC_UID: ${rtcUid}`);
   },
 

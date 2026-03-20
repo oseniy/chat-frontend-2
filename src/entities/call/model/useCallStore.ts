@@ -25,7 +25,7 @@ interface CallState {
   isVideoEnabled: boolean;
   toggleVideo: () => void;
 
-  makeCall: (toUserId: string, iceServers: RTCIceServer[]) => Promise<void>;
+  makeCall: (toUserId: string, iceServers?: RTCIceServer[]) => Promise<void>;
   handleIncomingOffer: (
     sdp: string,
     fromUserId: string,
@@ -64,7 +64,8 @@ export const useCallStore = create<CallState>((set, get) => ({
     if (!toUserId || !myId) return;
 
     try {
-      const pc = new RTCPeerConnection({ iceServers });
+      const servers = iceServers ?? (await callService.getIceServers());
+      const pc = new RTCPeerConnection({ iceServers: servers });
 
       pc.onicecandidate = (event) => {
         const rtcUid = get().messageRtcUid;
