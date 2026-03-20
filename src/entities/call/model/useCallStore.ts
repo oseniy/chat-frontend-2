@@ -4,7 +4,6 @@ import { useChatStore } from "@/entities/chat/model/useChatStore";
 
 import { callService } from "../api/callService";
 
-// В начале файла (если еще нет) или прямо перед использованием:
 interface ChatStoreState {
   currentUserId?: string;
   user?: { uid?: string };
@@ -21,7 +20,6 @@ interface CallState {
   offerRequestUid: string | null;
   callFromUser: string | null;
   callToUser: string | null;
-  // Исправлено: заменили any[] на RTCIceCandidateInit[] (стандарт для WebRTC)
   iceQueue: RTCIceCandidateInit[];
 
   makeCall: (toUserId: string, iceServers: RTCIceServer[]) => Promise<void>;
@@ -78,6 +76,12 @@ export const useCallStore = create<CallState>((set, get) => ({
         }
       };
 
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "closed" || pc.connectionState === "failed") {
+          get().endCall(false);
+        }
+      };
+
       // СРАЗУ сохраняем pc, чтобы провайдер мог его найти при ответе
       set({ pc, remoteUserId: toUserId, callStatus: "calling", iceQueue: [] });
 
@@ -88,7 +92,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // Отправляем оффер (rtcUid тут пока пустой, это нормально для начала)
+      // Отправляем оффер
       callService.sendSignal("offer_call", myId, toUserId, "", {
         offer_sdp: offer.sdp,
       });
@@ -115,7 +119,6 @@ export const useCallStore = create<CallState>((set, get) => ({
     const state = get();
     if (state.callStatus !== "ringing") return;
 
-    // Исправлено: заменили any на unknown + Record
     const chatState = useChatStore.getState() as unknown as Record<
       string,
       { uid?: string } | string | undefined
@@ -137,9 +140,14 @@ export const useCallStore = create<CallState>((set, get) => ({
       localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
 
       pc.ontrack = (e) => {
-        // e.streams — это массив, для srcObject нам нужен только сам объект потока
         if (e.streams && e.streams[0]) {
-          set({ remoteStream: e.streams[0] }); // Сохраняем ПЕРВЫЙ элемент напрямую
+          set({ remoteStream: e.streams[0] });
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === "closed" || pc.connectionState === "failed") {
+          get().endCall(false);
         }
       };
 
@@ -206,7 +214,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       try {
         await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp }));
 
-        // ДОБАВЬ ЭТО: прокидываем накопленные кандидаты сразу после установки Answer
+        // прокидываем накопленные кандидаты сразу после установки Answer
         for (const cand of iceQueue) {
           try {
             await pc.addIceCandidate(new RTCIceCandidate(cand));
@@ -226,7 +234,7 @@ export const useCallStore = create<CallState>((set, get) => ({
   endCall: (shouldNotify: boolean) => {
     const state = get();
 
-    // Безопасная типизация через интерфейс (TS18046 fix)
+    // Безопасная типизация через интерфейс
     interface ChatStoreState {
       currentUserId?: string;
       user?: { uid?: string };
