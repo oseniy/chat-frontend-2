@@ -21,6 +21,9 @@ interface CallState {
   callFromUser: string | null;
   callToUser: string | null;
   iceQueue: RTCIceCandidateInit[];
+  // Поля для UI оверлея
+  isVideoEnabled: boolean;
+  toggleVideo: () => void;
 
   makeCall: (toUserId: string, iceServers: RTCIceServer[]) => Promise<void>;
   handleIncomingOffer: (
@@ -30,7 +33,6 @@ interface CallState {
     toUserId: string,
   ) => void;
   acceptCall: (iceServers: RTCIceServer[]) => Promise<void>;
-  // Исправлено: заменили any на конкретный тип кандидата
   handleIceCandidate: (candidate: RTCIceCandidateInit) => Promise<void>;
   handleRemoteAnswer: (sdp: string) => Promise<void>;
   endCall: (shouldNotify: boolean) => void;
@@ -48,6 +50,12 @@ export const useCallStore = create<CallState>((set, get) => ({
   callFromUser: null,
   callToUser: null,
   iceQueue: [],
+  isVideoEnabled: false,
+
+  toggleVideo: () => {
+    // Просто переключаем состояние для UI
+    set((state) => ({ isVideoEnabled: !state.isVideoEnabled }));
+  },
 
   makeCall: async (toUserId, iceServers) => {
     const chatState = useChatStore.getState() as unknown as ChatStoreState;
@@ -58,10 +66,8 @@ export const useCallStore = create<CallState>((set, get) => ({
     try {
       const pc = new RTCPeerConnection({ iceServers });
 
-      // Сначала настраиваем обработчики, ПОТОМ вызываем getUserMedia
       pc.onicecandidate = (event) => {
         const rtcUid = get().messageRtcUid;
-        // Если rtcUid еще нет, просто логируем, но не блокируем поток
         if (event.candidate && rtcUid) {
           callService.sendSignal("ice_candidate", myId, toUserId, rtcUid, {
             ice_candidate: JSON.stringify(event.candidate.toJSON()),
@@ -82,7 +88,6 @@ export const useCallStore = create<CallState>((set, get) => ({
         }
       };
 
-      // СРАЗУ сохраняем pc, чтобы провайдер мог его найти при ответе
       set({ pc, remoteUserId: toUserId, callStatus: "calling", iceQueue: [] });
 
       const localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -92,7 +97,6 @@ export const useCallStore = create<CallState>((set, get) => ({
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // Отправляем оффер
       callService.sendSignal("offer_call", myId, toUserId, "", {
         offer_sdp: offer.sdp,
       });
@@ -125,12 +129,7 @@ export const useCallStore = create<CallState>((set, get) => ({
     >;
     const myId = String(chatState.currentUserId || (chatState.user as { uid?: string })?.uid || "");
 
-    if (
-      !state.callFromUser ||
-      !state.callToUser ||
-      !state.messageRtcUid ||
-      !state.offerRequestUid
-    ) {
+    if (!state.callFromUser || !state.callToUser || !state.messageRtcUid) {
       return;
     }
 
@@ -179,7 +178,7 @@ export const useCallStore = create<CallState>((set, get) => ({
         state.callToUser,
         state.messageRtcUid,
         { answer_sdp: answer.sdp },
-        state.offerRequestUid,
+        state.offerRequestUid || undefined,
       );
 
       const currentQueue = get().iceQueue;
@@ -213,8 +212,6 @@ export const useCallStore = create<CallState>((set, get) => ({
     if (pc && pc.signalingState !== "stable") {
       try {
         await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp }));
-
-        // прокидываем накопленные кандидаты сразу после установки Answer
         for (const cand of iceQueue) {
           try {
             await pc.addIceCandidate(new RTCIceCandidate(cand));
@@ -222,9 +219,7 @@ export const useCallStore = create<CallState>((set, get) => ({
             console.warn("[ICE] Ошибка добавления из очереди:", e);
           }
         }
-        // Очищаем очередь и ставим статус
         set({ callStatus: "connected", iceQueue: [] });
-        console.warn("✅ [SENDER] Соединение установлено");
       } catch (e) {
         console.warn("❌ [SENDER] Ошибка setRemoteDescription:", e);
       }
@@ -233,16 +228,9 @@ export const useCallStore = create<CallState>((set, get) => ({
 
   endCall: (shouldNotify: boolean) => {
     const state = get();
-
-    // Безопасная типизация через интерфейс
-    interface ChatStoreState {
-      currentUserId?: string;
-      user?: { uid?: string };
-    }
     const chatState = useChatStore.getState() as unknown as ChatStoreState;
     const myId = String(chatState?.currentUserId || chatState?.user?.uid || "");
 
-    // 1. Уведомляем сервер (если нужно)
     if (shouldNotify && state.remoteUserId && state.messageRtcUid && myId) {
       callService.sendSignal("call_completion", myId, state.remoteUserId, state.messageRtcUid, {
         type_complete: "success",
@@ -250,24 +238,17 @@ export const useCallStore = create<CallState>((set, get) => ({
       });
     }
 
-    // 2. Останавливаем все медиа-треки (микрофон/камеру)
     if (state.localStream) {
-      state.localStream.getTracks().forEach((t) => {
-        t.stop();
-        console.warn(`[CLEANUP] Track ${t.kind} stopped`);
-      });
+      state.localStream.getTracks().forEach((t) => t.stop());
     }
 
-    // 3. Закрываем PeerConnection и зануляем обработчики
     if (state.pc) {
       state.pc.onicecandidate = null;
       state.pc.ontrack = null;
       state.pc.onconnectionstatechange = null;
-      state.pc.onsignalingstatechange = null;
       state.pc.close();
     }
 
-    // 4. Полный сброс стора в начальное состояние
     set({
       pc: null,
       localStream: null,
@@ -280,8 +261,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       callFromUser: null,
       callToUser: null,
       iceQueue: [],
+      isVideoEnabled: false,
     });
-
-    console.warn("🏁 Звонок полностью завершен, ресурсы очищены.");
   },
 }));
