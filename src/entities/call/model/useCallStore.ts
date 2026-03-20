@@ -4,6 +4,12 @@ import { useChatStore } from "@/entities/chat/model/useChatStore";
 
 import { callService } from "../api/callService";
 
+// В начале файла (если еще нет) или прямо перед использованием:
+interface ChatStoreState {
+  currentUserId?: string;
+  user?: { uid?: string };
+}
+
 interface CallState {
   pc: RTCPeerConnection | null;
   localStream: MediaStream | null;
@@ -46,29 +52,18 @@ export const useCallStore = create<CallState>((set, get) => ({
   iceQueue: [],
 
   makeCall: async (toUserId, iceServers) => {
-    const chatState = useChatStore.getState() as unknown as Record<
-      string,
-      { uid?: string } | string | undefined
-    >;
-    const myId = String(chatState.currentUserId || (chatState.user as { uid?: string })?.uid || "");
+    const chatState = useChatStore.getState() as unknown as ChatStoreState;
+    const myId = String(chatState.currentUserId || chatState.user?.uid || "");
 
     if (!toUserId || !myId) return;
 
     try {
-      // 1. Создаем экземпляр соединения
       const pc = new RTCPeerConnection({ iceServers });
 
-      // 2. СРАЗУ кладем его в стор, чтобы handleRemoteAnswer мог его найти
-      set({ pc, remoteUserId: toUserId, callStatus: "calling", iceQueue: [] });
-
-      const localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
-
-      // Обновляем стор стримом
-      set({ localStream });
-
+      // Сначала настраиваем обработчики, ПОТОМ вызываем getUserMedia
       pc.onicecandidate = (event) => {
         const rtcUid = get().messageRtcUid;
+        // Если rtcUid еще нет, просто логируем, но не блокируем поток
         if (event.candidate && rtcUid) {
           callService.sendSignal("ice_candidate", myId, toUserId, rtcUid, {
             ice_candidate: JSON.stringify(event.candidate.toJSON()),
@@ -83,18 +78,22 @@ export const useCallStore = create<CallState>((set, get) => ({
         }
       };
 
-      // 3. Создаем Offer
-      const offer = await pc.createOffer();
+      // СРАЗУ сохраняем pc, чтобы провайдер мог его найти при ответе
+      set({ pc, remoteUserId: toUserId, callStatus: "calling", iceQueue: [] });
 
-      // 4. Устанавливаем LocalDescription (состояние сменится со stable на have-local-offer)
+      const localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      localStream.getTracks().forEach((t) => pc.addTrack(t, localStream));
+      set({ localStream });
+
+      const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
 
-      // 5. ТОЛЬКО ПОСЛЕ ЭТОГО отправляем сигнал на сервер
+      // Отправляем оффер (rtcUid тут пока пустой, это нормально для начала)
       callService.sendSignal("offer_call", myId, toUserId, "", {
         offer_sdp: offer.sdp,
       });
     } catch (err) {
-      console.warn("❌ MakeCall Error:", err);
+      console.error("❌ MakeCall Error:", err);
       get().endCall(false);
     }
   },
@@ -201,34 +200,41 @@ export const useCallStore = create<CallState>((set, get) => ({
   },
 
   handleRemoteAnswer: async (sdp) => {
-    const { pc } = get();
+    const { pc, iceQueue } = get();
 
-    // Проверяем, что pc существует и он НЕ в состоянии stable
     if (pc && pc.signalingState !== "stable") {
       try {
         await pc.setRemoteDescription(new RTCSessionDescription({ type: "answer", sdp }));
-        set({ callStatus: "connected" });
-        console.warn("✅ [SENDER] Соединение установлено (connected)");
+
+        // ДОБАВЬ ЭТО: прокидываем накопленные кандидаты сразу после установки Answer
+        for (const cand of iceQueue) {
+          try {
+            await pc.addIceCandidate(new RTCIceCandidate(cand));
+          } catch (e) {
+            console.warn("[ICE] Ошибка добавления из очереди:", e);
+          }
+        }
+        // Очищаем очередь и ставим статус
+        set({ callStatus: "connected", iceQueue: [] });
+        console.warn("✅ [SENDER] Соединение установлено");
       } catch (e) {
         console.warn("❌ [SENDER] Ошибка setRemoteDescription:", e);
       }
-    } else {
-      console.warn(
-        "⚠️ [SENDER] Пропуск answer: pc не готов или уже в stable. State:",
-        pc?.signalingState,
-      );
     }
   },
 
-  endCall: (shouldNotify) => {
+  endCall: (shouldNotify: boolean) => {
     const state = get();
-    // Исправлено: заменили any на unknown + Record
-    const chatState = useChatStore.getState() as unknown as Record<
-      string,
-      { uid?: string } | string | undefined
-    >;
-    const myId = String(chatState.currentUserId || (chatState.user as { uid?: string })?.uid || "");
 
+    // Безопасная типизация через интерфейс (TS18046 fix)
+    interface ChatStoreState {
+      currentUserId?: string;
+      user?: { uid?: string };
+    }
+    const chatState = useChatStore.getState() as unknown as ChatStoreState;
+    const myId = String(chatState?.currentUserId || chatState?.user?.uid || "");
+
+    // 1. Уведомляем сервер (если нужно)
     if (shouldNotify && state.remoteUserId && state.messageRtcUid && myId) {
       callService.sendSignal("call_completion", myId, state.remoteUserId, state.messageRtcUid, {
         type_complete: "success",
@@ -236,9 +242,24 @@ export const useCallStore = create<CallState>((set, get) => ({
       });
     }
 
-    state.localStream?.getTracks().forEach((t) => t.stop());
-    state.pc?.close();
+    // 2. Останавливаем все медиа-треки (микрофон/камеру)
+    if (state.localStream) {
+      state.localStream.getTracks().forEach((t) => {
+        t.stop();
+        console.warn(`[CLEANUP] Track ${t.kind} stopped`);
+      });
+    }
 
+    // 3. Закрываем PeerConnection и зануляем обработчики
+    if (state.pc) {
+      state.pc.onicecandidate = null;
+      state.pc.ontrack = null;
+      state.pc.onconnectionstatechange = null;
+      state.pc.onsignalingstatechange = null;
+      state.pc.close();
+    }
+
+    // 4. Полный сброс стора в начальное состояние
     set({
       pc: null,
       localStream: null,
@@ -252,5 +273,7 @@ export const useCallStore = create<CallState>((set, get) => ({
       callToUser: null,
       iceQueue: [],
     });
+
+    console.warn("🏁 Звонок полностью завершен, ресурсы очищены.");
   },
 }));

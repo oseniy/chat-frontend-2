@@ -16,57 +16,59 @@ export const CallSignalingProvider = ({ children }: { children: ReactNode }) => 
 
       const obj = (data.object as Record<string, unknown>) || {};
 
-      // Исправлено: безопасное получение myId без any
-      const chatState = useChatStore.getState() as unknown as Record<
-        string,
-        { uid?: string } | string | undefined
-      >;
-      const myId = String(
-        chatState.currentUserId || (chatState.user as { uid?: string })?.uid || "",
-      );
+      // Безопасное получение myId
+      interface ChatStoreState {
+        currentUserId?: string;
+        user?: { uid?: string };
+      }
+      const chatState = useChatStore.getState() as unknown as ChatStoreState;
+      const myId = String(chatState?.currentUserId || chatState?.user?.uid || "");
 
       const fromId = String(obj.from_user || obj.from_user_uid || data.from_user || "");
       const toId = String(obj.to_user || obj.to_user_uid || "");
 
-      const messageRtc = obj.message_rtc as Record<string, string> | undefined;
+      // ИЗВЛЕЧЕНИЕ UID СТРОГО ПО СХЕМЕ: obj.message_rtc.uid или obj.message_rtc_uid
+      const messageRtc = obj.message_rtc as Record<string, unknown> | undefined;
       const serverRtcUid = String(messageRtc?.uid || obj.message_rtc_uid || "");
+
       const incomingRequestUid = String(data.request_uid || "");
 
       const isMe = fromId === myId && fromId !== "";
+      const isForMe = toId === myId;
       const callStore = useCallStore.getState();
-      const currentStatus = callStore.callStatus; // Теперь используется ниже в switch
+      const currentStatus = callStore.callStatus;
 
       if (isMe) {
-        // ЛОГИКА ДЛЯ ИНИЦИАТОРА (ЗВОНЯЩЕГО)
+        // Логика для инициатора вызова
         if (action === "offer_call" && serverRtcUid) {
           if (currentStatus === "calling") {
-            console.warn("🎯 [SENDER] Фиксируем финальный UID от сервера:", serverRtcUid);
+            console.warn("🎯 [SENDER] UID сессии подтвержден:", serverRtcUid);
             useCallStore.setState({ messageRtcUid: serverRtcUid });
           }
         }
 
-        // ФИКС: Если это ответ на звонок, НЕ делаем return.
-        // Звонящий должен пропустить пакет дальше в switch.
-        if (action !== "answer_call") {
+        // КРИТИЧЕСКИЙ ФИКС: Разрешаем call_completion проходить дальше,
+        // даже если отправитель - мы, чтобы закрыть CallOverlay
+        if (action !== "answer_call" && action !== "call_completion") {
           return;
         }
       }
 
       switch (action) {
         case "offer_call": {
-          // Используем currentStatus, чтобы ESLint не ругался на unused var
           if (currentStatus !== "idle") {
-            console.warn("⚠️ Линия занята. Игнорируем повторный оффер.");
+            console.warn("⚠️ Линия занята.");
             return;
           }
 
-          const isForMe = toId === myId;
           if (isForMe && obj.offer_sdp) {
-            console.warn("📩 [RECEIVER] ПРИШЕЛ OFFER_CALL:", serverRtcUid);
+            console.warn("📩 [RECEIVER] Получен входящий вызов:", serverRtcUid);
 
             useCallStore.setState({
               messageRtcUid: serverRtcUid,
               offerRequestUid: incomingRequestUid,
+              callFromUser: fromId,
+              callToUser: toId,
             });
 
             callStore.handleIncomingOffer(obj.offer_sdp as string, fromId, serverRtcUid, toId);
@@ -75,15 +77,16 @@ export const CallSignalingProvider = ({ children }: { children: ReactNode }) => 
         }
 
         case "answer_call":
-          // Звонящий ловит этот экшен здесь
           if (obj.answer_sdp) {
-            console.warn("✅ [SENDER] Получен ответ на звонок, соединяем...");
+            console.warn("✅ [SENDER] Ответ получен, соединяем...");
             callStore.handleRemoteAnswer(obj.answer_sdp as string);
           }
           break;
 
         case "ice_candidate":
-          // Кандидаты принимаются только если UID совпадает (если он уже есть)
+          if (currentStatus === "idle") return;
+
+          // Проверяем соответствие сессии
           if (!serverRtcUid || serverRtcUid === callStore.messageRtcUid) {
             let cand = obj.ice_candidate;
             if (typeof cand === "string") {
@@ -93,14 +96,24 @@ export const CallSignalingProvider = ({ children }: { children: ReactNode }) => 
                 /* ignore */
               }
             }
-            if (cand) callStore.handleIceCandidate(cand as RTCIceCandidateInit);
+            if (cand) {
+              callStore.handleIceCandidate(cand as RTCIceCandidateInit);
+            }
           }
           break;
 
-        case "call_completion":
-          console.warn("🏁 Звонок завершен удаленной стороной");
-          useCallStore.getState().endCall(false);
+        case "call_completion": {
+          console.warn("🏁 Сигнал завершения (type):", obj.type_complete);
+
+          // Проверяем, что завершается именно текущий активный звонок
+          const isSameCall = !serverRtcUid || serverRtcUid === callStore.messageRtcUid;
+
+          if (isSameCall || currentStatus !== "idle") {
+            // false - чтобы не отправлять сигнал повторно, так как мы его получили
+            useCallStore.getState().endCall(false);
+          }
           break;
+        }
       }
     });
 
