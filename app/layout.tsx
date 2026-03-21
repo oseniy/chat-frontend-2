@@ -5,9 +5,9 @@ import { Roboto } from "next/font/google";
 import localFont from "next/font/local";
 import { cookies } from "next/headers";
 
-import { CallSignalingProvider } from "@/entities/call/model/CallSignalingProvider";
 import { SITE_TITLE } from "@/shared/lib/constants/siteInfo";
 import { AuthProvider } from "@/shared/providers/authProvider";
+import { CallSignalingProvider } from "@/shared/providers/CallSignalingProvider";
 import { IsMobileProvider } from "@/shared/providers/isMobileProvider";
 import { WSProvider } from "@/shared/providers/wsProvider";
 

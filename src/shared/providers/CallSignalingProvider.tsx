@@ -2,11 +2,10 @@
 
 import { ReactNode, useEffect } from "react";
 
+import { useCallStore } from "@/entities/call/model/useCallStore";
+import { CallOverlay } from "@/entities/call/ui/CallOverlay";
 import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { subscribeToWS } from "@/shared/api/ws/wsClient";
-
-import { CallOverlay } from "../ui/CallOverlay";
-import { useCallStore } from "./useCallStore";
 
 export const CallSignalingProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
