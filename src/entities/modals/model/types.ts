@@ -31,6 +31,11 @@ export type ModalPayloads = {
     token: string;
     previewData: ChatPreview;
   };
+  makeAdmin: {
+    participantName: string;
+    chatKey: string;
+    participantUid: string;
+  };
   //новые модалки здесь
 };
 

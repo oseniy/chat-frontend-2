@@ -37,6 +37,16 @@ export const useParticipantContextMenu = ({
               });
             },
           },
+          {
+            label: "Сделать администратором",
+            onClick: () => {
+              openModal("makeAdmin", {
+                participantName: participant.fullName,
+                chatKey: chatKey,
+                participantUid: participant.uid,
+              });
+            },
+          },
         ],
         e.clientX,
         e.clientY,

@@ -10,6 +10,7 @@ import { DeleteChatModal } from "@/features/chatList/ui/deleteChatModal/deleteCh
 import { ClearChatModal } from "@/features/clearChat/ui/clearChatModal";
 import { DeleteChatGlobalModal } from "@/features/deleteChatGlobal/ui/deleteChatGlobalModal";
 import { LeaveChatModal } from "@/features/leaveChat/ui/leaveChatModal";
+import { MakeAdminModal } from "@/features/makeAdmin/ui/makeAdminModal";
 import { RemoveParticipantModal } from "@/features/removeParticipant/ui/removeParticipantModal";
 
 import { SendFileModal } from "../../../features/chat/chat/ui/sendFileModal/sendFileModal";
@@ -26,6 +27,7 @@ const MODAL_COMPONENTS: Record<string, React.FC<any>> = {
   forward: ForwardModal,
   removeParticipant: RemoveParticipantModal,
   chatPreview: ChatPreviewModal,
+  makeAdmin: MakeAdminModal,
   // новые модалки сюда
 };
 
