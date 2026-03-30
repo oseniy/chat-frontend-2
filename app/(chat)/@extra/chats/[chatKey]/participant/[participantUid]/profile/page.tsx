@@ -9,6 +9,7 @@ type ParticipantProfilePageProps = {
 
 export default async function ParticipantProfilePage({ params }: ParticipantProfilePageProps) {
   const { participantUid } = await params;
+  const personalChatKey = `user_${participantUid}`;
 
   const response = await getChatServer(participantUid, "chat");
   if (!response.success) {
@@ -22,6 +23,7 @@ export default async function ParticipantProfilePage({ params }: ParticipantProf
       contacts={contacts}
       chatType="chat"
       chatInfo={response.data as User | null}
+      chatKey={personalChatKey}
     />
   );
 }

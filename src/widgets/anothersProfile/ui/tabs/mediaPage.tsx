@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 
 import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { MappedMessageFile } from "@/features/chat/chat/model/types/mappedTypes";
@@ -7,23 +7,24 @@ import ImageGallery from "@/shared/ui/ImageGallery/ImageGallery";
 
 type MediaPageProps = {
   className?: string;
+  chatKey?: string;
 };
 
-export const MediaPage: React.FC<MediaPageProps> = ({ className }) => {
+export const MediaPage: React.FC<MediaPageProps> = ({ className, chatKey: chatKeyProp }) => {
   const media = useChatStore((state) => state.media);
   const isLoadingMedia = useChatStore((state) => state.isLoadingMedia);
-  const isMediaLoaded = useChatStore((state) => state.isMediaLoaded);
   const fetchMedia = useChatStore((state) => state.fetchMedia);
-  const chatKey = useChatStore((state) => state.chatKey);
+  const storeChatKey = useChatStore((state) => state.chatKey);
+
+  const effectiveChatKey = chatKeyProp ?? storeChatKey;
+  const lastFetchedKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // Загружаем только если есть ключ И данные еще не были загружены для этого сеанса
-    if (chatKey && !isMediaLoaded) {
-      fetchMedia(chatKey);
+    if (effectiveChatKey && effectiveChatKey !== lastFetchedKeyRef.current) {
+      lastFetchedKeyRef.current = effectiveChatKey;
+      fetchMedia(effectiveChatKey);
     }
-
-    // данные во вкладке кэшируются, пока пользователь не сменит чат.
-  }, [chatKey, isMediaLoaded, fetchMedia]);
+  }, [effectiveChatKey, fetchMedia]);
 
   const formattedImages = useMemo(() => {
     const seen = new Set<string>();

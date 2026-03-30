@@ -21,10 +21,10 @@ export const ParticipantCard: React.FC<ParticipantCardProps> = ({
   isOwner,
   className,
 }) => {
-  const { onContextMenu } = useParticipantContextMenu({ participant, chatKey });
+  const { onContextMenu } = useParticipantContextMenu({ participant, chatKey, isOwner });
 
   return (
-    <div className={cn("", className)} onContextMenu={isOwner ? onContextMenu : undefined}>
+    <div className={cn("", className)} onContextMenu={onContextMenu}>
       <ContactCard contact={participant} isLast={isLast} />
     </div>
   );

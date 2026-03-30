@@ -29,12 +29,14 @@ type AnothersProfileProps = {
   initialData: User | null;
   contactsInitialData?: ContactListResponse | null;
   isMobile: boolean;
+  chatKey?: string;
 };
 
 export const AnothersProfile: React.FC<AnothersProfileProps> = ({
   initialData,
   contactsInitialData,
   isMobile,
+  chatKey,
 }) => {
   const { activeTab, setActiveTab, setActiveSection } = useAnothersProfileUIStore(
     useShallow((s) => ({
@@ -104,7 +106,7 @@ export const AnothersProfile: React.FC<AnothersProfileProps> = ({
             <OurTabsTrigger value="links">Ссылки</OurTabsTrigger>
           </OurTabsList>
           <TabsContent value="media">
-            <MediaPage />
+            <MediaPage chatKey={chatKey} />
           </TabsContent>
           <TabsContent value="files">
             <FilesPage />
