@@ -1,4 +1,5 @@
 import Delete from "@icons/chat/context-menu/delete.svg";
+import { useRouter } from "next/navigation";
 import { MouseEvent } from "react";
 
 import { ChatParticipant } from "@/entities/chat/model/types";
@@ -16,6 +17,7 @@ export const useParticipantContextMenu = ({
 }: UseParticipantContextMenuParams) => {
   const { openMenu, activeMenuId } = useContextMenu();
   const openModal = useModalStore((s) => s.openModal);
+  const router = useRouter();
 
   const menuId = `participant-${participant.uid}`;
 
@@ -45,6 +47,12 @@ export const useParticipantContextMenu = ({
                 chatKey: chatKey,
                 participantUid: participant.uid,
               });
+            },
+          },
+          {
+            label: "Посмотреть профиль",
+            onClick: () => {
+              router.push(`/chats/${chatKey}/participant/${participant.uid}/profile`);
             },
           },
         ],
