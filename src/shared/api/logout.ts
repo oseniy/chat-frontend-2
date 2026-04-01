@@ -57,6 +57,6 @@ export const logout = async (options?: { broadcast?: boolean }) => {
     // игнорируем ошибки сети (флаг isLoggedOut останется в localStorage)
   } finally {
     // Принудительный редирект для сброса стейта
-    window.location.href = "/login";
+    window.location.href = "/auth";
   }
 };
