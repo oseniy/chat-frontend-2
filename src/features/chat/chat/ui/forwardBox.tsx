@@ -33,8 +33,6 @@ export const ForwardBox: React.FC<ForwardBoxProps> = ({ className }) => {
     FILE_TYPES.some((t) => t.startsWith(file.filesList[0]?.fileType || " ")),
   );
 
-  console.log("forwardTargets", firstFile);
-
   const singleFileCaption = () => {
     if (firstFile?.filesList.length === 1) {
       return firstFile.filesList[0].fileUrl.split("/").pop();

@@ -62,8 +62,6 @@ export const useChatMessagesInfinite = (chatUid: string | null) => {
         page_size: PAGE_SIZE,
         // ordering: "-created_at",
       });
-
-      console.log("result", result);
       if (!result.success) {
         throw new Error("Ошибка получения сообщений");
       }
