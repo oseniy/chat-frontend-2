@@ -37,13 +37,16 @@ export const MessageList: React.FC<MessageListProps> = ({
   const messages = useChatStore((s) => s.messages);
   const isReady = useChatStore((s) => s.isReady);
   const chatType = useChatStore((s) => s.chatType);
+  const chatId = useChatStore((s) => s.chatId);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const topLoaderRef = useRef<HTMLDivElement>(null);
 
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  const prevScrollHeightRef = useRef<number>(0);
-  const prevMessagesCountRef = useRef<number>(0);
+  // ✅ ВАЖНО: контроль prepend
+  const isPrependingRef = useRef(false);
+  const prevScrollHeightRef = useRef(0);
 
   const groups = useMemo(() => groupMessagesByDate(messages), [messages]);
 
@@ -67,6 +70,7 @@ export const MessageList: React.FC<MessageListProps> = ({
     scrollContainerRef,
   });
 
+  // ✅ initial scroll
   useEffect(() => {
     if (!isReady) return;
 
@@ -79,36 +83,45 @@ export const MessageList: React.FC<MessageListProps> = ({
     return () => clearTimeout(timer);
   }, [isReady, performInitialScroll]);
 
+  // =========================
+  // 🔽 NAVIGATION (jump to msg)
+  // =========================
+
   const targetMessageId = useMessageNavigation((s) => s.targetMessageId);
   const targetPage = useMessageNavigation((s) => s.targetPage);
   const requestId = useMessageNavigation((s) => s.requestId);
   const clearHighlight = useMessageNavigation((s) => s.clearHighlight);
   const reset = useMessageNavigation((s) => s.reset);
+  const searchQuery = useMessageNavigation((s) => s.searchQuery);
 
   const saveScrollSnapshot = () => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     prevScrollHeightRef.current = container.scrollHeight;
-    prevMessagesCountRef.current = messages.length;
   };
+
+  // 🔽 подгрузка до нужной страницы
   useEffect(() => {
     if (targetPage === null) return;
 
     if (loadedPages < targetPage && hasNextPage && !isFetchingNextPage) {
+      isPrependingRef.current = true;
       saveScrollSnapshot();
       fetchNextPage?.();
     }
   }, [targetPage, loadedPages, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+  // 🔽 скролл к сообщению
   useEffect(() => {
     if (!targetMessageId) return;
 
     const exists = messages.some((m) => m.uid === targetMessageId);
-
     if (!exists) return;
 
     scrollToMessage(targetMessageId);
+
+    if (searchQuery) return;
 
     const timer = setTimeout(() => {
       clearHighlight();
@@ -116,13 +129,17 @@ export const MessageList: React.FC<MessageListProps> = ({
     }, 1500);
 
     return () => clearTimeout(timer);
-  }, [messages, requestId, targetMessageId, scrollToMessage, clearHighlight, reset]);
+  }, [messages, requestId, targetMessageId]);
+
+  // =========================
+  // 🔥 СТАБИЛИЗАЦИЯ SCROLL
+  // =========================
 
   useLayoutEffect(() => {
+    if (!isPrependingRef.current) return;
+
     const container = scrollContainerRef.current;
     if (!container) return;
-
-    if (messages.length <= prevMessagesCountRef.current) return;
 
     const newScrollHeight = container.scrollHeight;
     const heightDiff = newScrollHeight - prevScrollHeightRef.current;
@@ -131,33 +148,39 @@ export const MessageList: React.FC<MessageListProps> = ({
       container.scrollTop += heightDiff;
     }
 
-    prevScrollHeightRef.current = newScrollHeight;
-    prevMessagesCountRef.current = messages.length;
+    isPrependingRef.current = false;
   }, [messages]);
 
+  // =========================
+  // 🔼 INFINITE SCROLL (TOP)
+  // =========================
+
   useEffect(() => {
-    if (!topLoaderRef.current) return;
-    if (!fetchNextPage || !hasNextPage) return;
+    const root = scrollContainerRef.current;
+    const target = topLoaderRef.current;
+
+    if (!root || !target || !fetchNextPage || !hasNextPage) return;
 
     const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-
+      ([entry]) => {
         if (entry.isIntersecting && !isFetchingNextPage) {
+          isPrependingRef.current = true;
           saveScrollSnapshot();
           fetchNextPage();
         }
       },
       {
-        root: scrollContainerRef.current,
+        root,
         threshold: 0.1,
       },
     );
 
-    observer.observe(topLoaderRef.current);
+    observer.observe(target);
 
     return () => observer.disconnect();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
+
+  // =========================
 
   const showEmptyState = groups.length === 0 && !isInitialLoading;
   const showLoadingState = isInitialLoading || !isReady;
@@ -172,6 +195,7 @@ export const MessageList: React.FC<MessageListProps> = ({
           </div>
         </div>
       )}
+
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
@@ -181,9 +205,15 @@ export const MessageList: React.FC<MessageListProps> = ({
           className,
         )}
       >
-        {/* <div ref={topLoaderRef} className="flex w-full justify-center py-2"> */}
-        {isFetchingNextPage && <TopLoader />}
-        {/* </div> */}
+        {/* 🔥 SENTINEL (не влияет на layout) */}
+        <div ref={topLoaderRef} className="h-1" />
+
+        {/* 🔥 LOADER (вне потока) */}
+        {isFetchingNextPage && (
+          <div className="absolute top-2 left-1/2 -translate-x-1/2">
+            <TopLoader />
+          </div>
+        )}
 
         {showEmptyState && <MessageListEmptyInfo type={chatType} isOwner={isOwner} />}
 
@@ -194,6 +224,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               label={group.label}
               messages={group.messages}
               currentUserId={currentUserId}
+              chatId={chatId || 0}
               passDataAttributes
               isGroup={chatType === "public-group" || chatType === "private-group"}
             />

@@ -47,16 +47,6 @@ export const FileMessage: React.FC<FileMessageProps> = ({
           <File className="h-full w-full transition-transform duration-300 group-hover:scale-105" />
         )}
 
-        {/* {file.fileType === "image/heic" && status !== "pending" && (
-          <Image
-            src={file.src}
-            alt={file.title || file.src.split("/").pop() || ""}
-            width={48}
-            height={48}
-            className="h-full w-full rounded-md bg-white object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        )} */}
-
         {file.type === "audio" && status !== "pending" && (
           <Audio className="h-full w-full transition-transform duration-300 group-hover:scale-105" />
         )}

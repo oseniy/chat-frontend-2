@@ -5,7 +5,6 @@ import { AudioMessage } from "../../../recordVoiceMessage/ui/audioMessage";
 import { MessageBlock } from "../model/messageBlock/types";
 import { SendingStatus } from "../model/types/serverTypes";
 import { FileMessage } from "./fileMessage";
-import { MessageForwarded } from "./messageForwarded";
 import { MessageReply } from "./messageReply";
 import { MessageText } from "./messageText";
 import { MessageTimeAndStatus } from "./messageTimeAndStatus";
@@ -30,9 +29,6 @@ export const MessageBlockRenderer = ({
   switch (block.type) {
     case "reply":
       return <MessageReply isMine={isMine} message={block} />;
-
-    case "forwarded":
-      return <MessageForwarded message={block} />;
 
     case "media":
       return (

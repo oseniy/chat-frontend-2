@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 
 import { ChatListItem } from "@/entities/chat/model/types";
 import { useChatStore } from "@/entities/chat/model/useChatStore";
@@ -22,10 +21,9 @@ export const ChatList: React.FC<ChatListProps> = ({ chats, isSearch }) => {
     (s) => s,
   );
 
-  const [clickedItem, setClickedItem] = useState<number | null>(null);
-
   const actions = useChatListActions();
 
+  console.log(chats);
   return (
     <>
       {chats.length > 0 ? (
@@ -43,12 +41,9 @@ export const ChatList: React.FC<ChatListProps> = ({ chats, isSearch }) => {
               clearForwardTargets();
               clearReplyTarget();
               exitSelectionMode();
-              setClickedItem(chat.id);
             }}
             chat={chat}
-            isActive={
-              clickedItem === chat.id || chat.key === chatKey || chat.member.uid === chatKey
-            }
+            isActive={chat.key === chatKey || chat.member.uid === chatKey}
             isLast={chat.id === chats[chats.length - 1].id}
           />
         ))

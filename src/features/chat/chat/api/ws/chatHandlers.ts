@@ -73,6 +73,8 @@ export const handleCreateTextMessage: WSHandler = (data) => {
         uid: newMessage.uid,
         content: newMessage.content,
         created_at: newMessage.createdAt,
+        has_forwarded_message: newMessage.forwardedMessages.length > 0,
+        has_replied_message: newMessage.repliedMessages.length > 0,
         files_summary: {
           count: newMessage.filesList.length,
           types: newMessage.filesList
@@ -96,10 +98,12 @@ export const handleCreateTextMessage: WSHandler = (data) => {
     chatListStore.upsertChat(newChat);
   } else if (!isMine) {
     optimisticSendMessage({
+      isFromMe: false,
       chatKey: newMessage.chatKey,
       message: {
         id: newMessage.id,
         uid: newMessage.uid,
+        hasForwarded: newMessage.isForwarded,
         files_summary: {
           count: newMessage.filesList.length,
           types: newMessage.filesList
@@ -114,8 +118,16 @@ export const handleCreateTextMessage: WSHandler = (data) => {
   }
 };
 
+type WSChatData = {
+  chat_data: {
+    chat_key: string;
+  };
+};
+
 export const handleReadStatus: WSHandler = (data) => {
   if (!data.object) return;
+  const obj = data.object as WSChatData;
+  const chatKey = obj.chat_data.chat_key;
 
   const updatedMsg = mapChatMessage(data.object as ChatMessage);
   if (!updatedMsg.uid) return;
@@ -125,6 +137,25 @@ export const handleReadStatus: WSHandler = (data) => {
       msg.uid === updatedMsg.uid ? { ...msg, isNew: false } : msg,
     ),
   }));
+
+  const currentChat = useChatListStore.getState().chatsByKey[chatKey || ""];
+
+  if (!currentChat) return;
+  const patch: Partial<ChatListItem> = {
+    unreadMessages: Math.max(0, currentChat.unreadMessages - 1),
+  };
+
+  if (currentChat.lastMessage) {
+    patch.lastMessage = {
+      ...currentChat.lastMessage,
+      new: updatedMsg.id === currentChat.lastMessage?.id ? false : true,
+    };
+  }
+
+  useChatListStore.getState().patchChat(chatKey, patch);
+
+  console.log("handleReadStatus patched", useChatListStore.getState().chatsByKey[chatKey]);
+
   return;
 };
 
@@ -134,7 +165,7 @@ export type WSDeleteMessageData = {
   to_user?: { uid: string };
 };
 
-// eslint-disable-next-line
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export const handleDeleteMessage: WSHandler<any> = (data) => {
   const payload = data.object as WSDeleteMessageData;
 

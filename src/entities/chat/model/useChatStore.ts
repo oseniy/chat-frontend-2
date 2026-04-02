@@ -11,14 +11,15 @@ interface ChatState {
   currentUserId: string | null;
   chatKey: string | null;
   chatType: ChatType | null;
+  createdBy: string | null;
   media: MappedMessageFile[];
   isLoadingMedia: boolean;
-  isMediaLoaded: boolean; // Флаг для кэширования
-  createdBy: string | null;
+  isMediaLoaded: boolean;
   chatUid: string | null;
   isReady: boolean;
   isHide: boolean;
   chatKeyUser: string | null;
+  chatId: number | null;
 
   replyTarget: MappedChatMessage | null;
   forwardTargets: MappedChatMessage[];
@@ -49,6 +50,7 @@ interface ChatState {
     createdBy?: string,
     chatKeyUser?: string | null,
     chatUid?: string,
+    chatId?: number,
     forwardTargets?: [],
   ) => void;
   prependMessages: (messages: MappedChatMessage[]) => void;
@@ -65,13 +67,14 @@ interface ChatState {
 
 export const useChatStore = create<ChatState>((set) => ({
   messages: [],
-  media: [],
-  isLoadingMedia: false,
-  isMediaLoaded: false,
   currentUserId: null,
   chatKey: null,
   chatUid: null,
   isReady: false,
+  chatId: null,
+  isLoadingMedia: false,
+  isMediaLoaded: false,
+  media: [],
   isHide: false,
   replyTarget: null,
   forwardTargets: [],
@@ -102,12 +105,6 @@ export const useChatStore = create<ChatState>((set) => ({
       };
     }),
 
-  exitSelectionMode: () =>
-    set(() => ({
-      isSelectionMode: false,
-      selectedMessageUids: new Set(),
-    })),
-
   fetchMedia: async (chatKey: string) => {
     if (!chatKey) return;
     set({ isLoadingMedia: true });
@@ -131,7 +128,22 @@ export const useChatStore = create<ChatState>((set) => ({
     }
   },
 
-  setInitialData: (messages, currentUserId, chatKey, chatType, createdBy, chatKeyUser, chatUid) => {
+  exitSelectionMode: () =>
+    set(() => ({
+      isSelectionMode: false,
+      selectedMessageUids: new Set(),
+    })),
+
+  setInitialData: (
+    messages,
+    currentUserId,
+    chatKey,
+    chatType,
+    createdBy,
+    chatKeyUser,
+    chatUid,
+    chatId,
+  ) => {
     set({
       messages,
       currentUserId,
@@ -139,6 +151,7 @@ export const useChatStore = create<ChatState>((set) => ({
       isReady: true,
       chatType,
       chatUid,
+      chatId,
       createdBy,
       chatKeyUser,
     });
@@ -211,7 +224,6 @@ export const useChatStore = create<ChatState>((set) => ({
   clearMessages: () => set({ messages: [], replyTarget: null }),
 
   clearMedia: () => set({ media: [], isLoadingMedia: false, isMediaLoaded: false }),
-
   reset: () =>
     set({
       messages: [],
@@ -219,6 +231,9 @@ export const useChatStore = create<ChatState>((set) => ({
       chatKey: null,
       isReady: false,
       replyTarget: null,
+      media: [],
+      isLoadingMedia: false,
+      isMediaLoaded: false,
       // forwardTargets: [],
     }),
 }));

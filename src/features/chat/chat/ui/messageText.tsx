@@ -9,6 +9,7 @@ import { useToast } from "@/shared/toast/ui/toastProvider";
 
 import { handleInviteLinkClick } from "../lib/handleInviteLinkClick";
 import { TextBlock } from "../model/messageBlock/types";
+import { useMessageNavigation } from "../model/store/useChatNavigationStore";
 import { SendingStatus } from "../model/types/serverTypes";
 import { MessageTimeAndStatus } from "./messageTimeAndStatus";
 
@@ -69,6 +70,29 @@ export const MessageText: React.FC<MessageTextProps> = ({
   status,
   hasNameAbove,
 }) => {
+  const searchQuery = useMessageNavigation((s) => s.searchQuery);
+  const highlightText = (text: string, query?: string | null) => {
+    if (!query) return text;
+
+    const lowerText = text.toLowerCase();
+    const lowerQuery = query.toLowerCase();
+
+    const index = lowerText.indexOf(lowerQuery);
+
+    if (index === -1) return text;
+
+    const before = text.slice(0, index);
+    const match = text.slice(index, index + query.length);
+    const after = text.slice(index + query.length);
+
+    return (
+      <>
+        {before}
+        <span className="text-[#0079ff]">{match}</span>
+        {after}
+      </>
+    );
+  };
   const { showToast } = useToast();
   const router = useRouter();
   const urlComponent = useMemo(() => createUrlComponent(router, showToast), [router, showToast]);
@@ -89,7 +113,7 @@ export const MessageText: React.FC<MessageTextProps> = ({
     >
       <LinkIt component={urlComponent} regex={urlRegex}>
         <p className="subtext emojis-apple desktop:wrap-break-word min-w-0 pr-2 wrap-anywhere whitespace-pre-wrap">
-          {block.text}
+          {highlightText(block.text, searchQuery)}
         </p>
       </LinkIt>
       <div className="flex flex-col justify-end">

@@ -19,6 +19,7 @@ type ChatListState = {
   upsertChat: (chat: ChatListItem) => void;
   patchChat: (chatKey: string, patch: Partial<ChatListItem>) => void;
   removeChat: (chatKey: string) => void;
+  decrementUnread: (chatKey: string, count?: number) => void;
 
   // sync
   setCount: (count: number) => void;
@@ -53,6 +54,24 @@ export const useChatListStore = create<ChatListState>((set, get) => ({
 
       order = applyChatOrder(order, chatsByKey);
       return { chatsByKey, order };
+    }),
+
+  decrementUnread: (chatKey, count = 1) =>
+    set((state) => {
+      const chat = state.chatsByKey[chatKey];
+      if (!chat) return state;
+
+      const nextUnread = Math.max(0, chat.unreadMessages - count);
+
+      return {
+        chatsByKey: {
+          ...state.chatsByKey,
+          [chatKey]: {
+            ...chat,
+            unreadMessages: nextUnread,
+          },
+        },
+      };
     }),
 
   upsertChat: (chat) =>

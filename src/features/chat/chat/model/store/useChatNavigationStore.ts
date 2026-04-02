@@ -4,20 +4,26 @@ import { searchMessagePosition } from "../../lib/searchMessagePosition";
 
 export const navigateToMessage = async ({
   userUid,
+  type,
   messageUid,
 }: {
   userUid: string;
+  type: "id_or_uid" | "content";
   messageUid: string;
 }) => {
   const result = await searchMessagePosition({
     userUid,
+    type: type,
     query: messageUid,
   });
 
   if (!result.success) {
     return;
   }
-  useMessageNavigation.getState().navigate(result.data[0].uid, result.data[0].page);
+
+  useMessageNavigation
+    .getState()
+    .navigate(result.data[0].uid, result.data[0].page, type === "content" ? messageUid : undefined);
 };
 
 interface ChatNavigationState {
@@ -26,9 +32,12 @@ interface ChatNavigationState {
   highlightMessageId: string | null;
   requestId: number;
 
-  navigate: (messageId: string, page: number) => void;
+  searchQuery: string | null;
+
+  navigate: (messageId: string, page: number, query?: string) => void;
   clearHighlight: () => void;
   reset: () => void;
+  resetSearch: () => void;
 }
 
 export const useMessageNavigation = create<ChatNavigationState>((set) => ({
@@ -37,10 +46,13 @@ export const useMessageNavigation = create<ChatNavigationState>((set) => ({
   highlightMessageId: null,
   requestId: 0,
 
-  navigate: (messageId, page) =>
+  searchQuery: null,
+
+  navigate: (messageId, page, query) =>
     set((state) => ({
       targetMessageId: messageId,
       targetPage: page,
+      searchQuery: query ?? null,
       highlightMessageId: messageId,
       requestId: state.requestId + 1,
     })),
@@ -56,4 +68,6 @@ export const useMessageNavigation = create<ChatNavigationState>((set) => ({
       targetPage: null,
       highlightMessageId: null,
     }),
+
+  resetSearch: () => set({ targetMessageId: null, targetPage: null, searchQuery: null }),
 }));

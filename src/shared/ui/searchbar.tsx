@@ -1,6 +1,6 @@
 import CloseIcon from "@icons/chat/close.svg";
 import SearchIcon from "@icons/chat/search.svg";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 import { cn } from "@/shared/shadcn/lib/utils";
 import { Button } from "@/shared/shadcn/ui/button";
@@ -9,15 +9,26 @@ import { Input } from "@/shared/shadcn/ui/input";
 type SearchbarProps = {
   className?: string;
   onChange?: (value: string) => void;
+  isSearchOpen?: boolean;
   value?: string;
+  isFocused?: boolean;
 };
 
-export const Searchbar: React.FC<SearchbarProps> = ({ className, onChange, value }) => {
+export const Searchbar: React.FC<SearchbarProps> = ({
+  className,
+  onChange,
+  value,
+  isSearchOpen,
+}) => {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onSearchChange = (value: string) => {
     if (onChange) onChange(value);
   };
+
+  useEffect(() => {
+    if (isSearchOpen) inputRef.current?.focus();
+  }, [isSearchOpen]);
 
   const onClose = () => {
     onSearchChange("");

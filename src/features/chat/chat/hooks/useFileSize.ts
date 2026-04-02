@@ -6,6 +6,7 @@ export const useFileSize = (url: string) => {
   const [fileSize, setFileSize] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  return { fileSize, isLoading, error };
 
   useEffect(() => {
     const fetchFileSize = async () => {

@@ -13,7 +13,7 @@ const buttonVariants = cva(
           "border-primary bg-primary desktop:hover:bg-primary-light desktop:hover:border-primary-light desktop:hover:text-primary active:bg-primary-light active:border-primary-light active:text-primary border-[2px] text-white",
         outline:
           "border-primary text-primary desktop:hover:border-accent desktop:hover:text-primary-dark active:border-accent active:text-primary-dark disabled:border-muted border border-[2px]",
-        text: "text-primary desktop:hover:text-primary-light active:text-primary-light bg-transparent p-0",
+        text: "text-primary desktop:hover:text-primary-light active:text-primary-light bg-transparent p-0 disabled:bg-transparent",
         ghost: "disabled:bg-transparent",
       },
       size: {

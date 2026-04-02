@@ -42,9 +42,9 @@ export const InviteLinkPreview = ({ chatKey, token }: InviteLinkPreviewProps) =>
       : `${data.participantsCount} ${pluralize(data.participantsCount, "участник", "участника", "участников")}`);
 
   return (
-    <div className="mx-3 mt-1.5">
+    <div className="mx-3 mt-1.5 min-w-0">
       <div
-        className="cursor-pointer"
+        className="min-w-0 cursor-pointer overflow-hidden"
         onClick={() =>
           handleInviteLinkClick({
             url: `/chats/${chatKey}?token=${token}`,
@@ -53,7 +53,7 @@ export const InviteLinkPreview = ({ chatKey, token }: InviteLinkPreviewProps) =>
           })
         }
       >
-        <div className="border-primary flex items-start gap-1 rounded border-l-4 bg-white/50 p-1 px-2.5">
+        <div className="border-primary flex min-w-0 items-start gap-1 overflow-hidden rounded border-l-4 bg-white/50 p-1 px-2.5">
           <Avatar avatarUrl={data.avatarUrl} size="sm" variant="chat" />
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="text-primary truncate text-sm leading-[130%] font-bold">

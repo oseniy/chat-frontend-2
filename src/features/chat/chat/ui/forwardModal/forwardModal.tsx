@@ -22,7 +22,7 @@ type ForwardModalProps = {
 
 export const ForwardModal: React.FC<ForwardModalProps> = ({ className, isOpen, onClose }) => {
   const [search, setSearch] = useState("");
-  const { setForwardTargets } = useChatStore();
+  const { setForwardTargets, chatKey, chatKeyUser } = useChatStore();
 
   const handleClose = () => {
     setForwardTargets([]);
@@ -52,7 +52,11 @@ export const ForwardModal: React.FC<ForwardModalProps> = ({ className, isOpen, o
                 {chats.map((chat) => (
                   <div key={chat.key}>
                     <Link
-                      className="hover:bg-primary-accent-light flex items-center gap-2 py-2 pl-4 text-sm transition-colors duration-200"
+                      className={cn(
+                        "hover:bg-primary-accent-light flex items-center gap-2 py-2 pl-4 text-sm transition-colors duration-200",
+                        (chat.key === chatKey || chat.key === chatKeyUser) &&
+                          "border-primary-accent border-y-2",
+                      )}
                       href={
                         chat.type === "chat" ? `/chats/${chat.member.uid}` : `/chats/${chat.key}`
                       }

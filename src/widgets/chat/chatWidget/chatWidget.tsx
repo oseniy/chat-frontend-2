@@ -60,12 +60,11 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
           wasOnlineAt: chatInfo.wasOnlineAt,
           isOnline: chatInfo.isOnline,
           membersCount: chatInfo.membersCount,
+          chatUid: chatUid,
           chatType: chatType,
         }}
         join={join}
         chatKey={chatKey}
-        onCallClick={() => {}}
-        onSearchClick={() => {}}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Chat
