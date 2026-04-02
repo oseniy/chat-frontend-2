@@ -48,6 +48,10 @@ export type ChatObject = {
     uid: string;
     full_name: string;
   }>;
+  remove_users: Array<{
+    uid: string;
+    full_name: string;
+  }>;
 };
 
 export interface ChatListItemDto {

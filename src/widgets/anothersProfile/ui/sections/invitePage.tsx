@@ -4,7 +4,6 @@ import { useShallow } from "zustand/shallow";
 
 import { addMembersToChat } from "@/entities/chat/api/addMemberToChat";
 import { ChatParticipantListResponse } from "@/entities/chat/model/types";
-import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
 import { useParticipantsStore } from "@/entities/chat/model/useParticipantsStore";
 import { useContactsSync } from "@/entities/contact/lib/useContactsSync";
 import { useContactStore } from "@/entities/contact/model/store";
@@ -101,11 +100,6 @@ export const InvitePage: React.FC<InvitePageProps> = ({ chatKey }) => {
           };
         },
       );
-
-      useChatInfoStore.getState().patchChatInfo(chatKey, {
-        membersCount:
-          (useChatInfoStore.getState().chatInfoByKey[chatKey]?.membersCount ?? 0) + addedCount,
-      });
 
       // Инвалидируем кэш для фоновой синхронизации с сервером
       queryClient.invalidateQueries({ queryKey: ["participants", chatKey] });
