@@ -7,6 +7,7 @@ import {
 import { handleCreateChat } from "@/features/createChat/api/handleCreateChat";
 import { handleDeleteChat } from "@/features/deleteChatGlobal/api/handleDeleteChat";
 import { handleInviteToChat } from "@/features/inviteToChat/api/handleInviteToChat";
+import { handleJoinedToChat } from "@/features/joinToChat/api/handleJoinedToChat";
 import { handleLeaveChat } from "@/features/leaveChat/api/handleLeaveChat";
 import { handleRemoveParticipants } from "@/features/removeParticipant/api/handleRemoveParticipants";
 import { WS_ACTIONS } from "@/shared/constants/constants";
@@ -23,6 +24,8 @@ export const bootstrapWSHandlers = () => {
   registerWSHandler(WS_ACTIONS.EDIT_CHAT, handleEditChat);
 
   registerWSHandler(WS_ACTIONS.ADD_MEMBERS_TO_CHAT, handleInviteToChat);
+
+  registerWSHandler(WS_ACTIONS.MEMBER_ADDED, handleJoinedToChat);
 
   registerWSHandler(WS_ACTIONS.REMOVE_MEMBERS_FROM_CHAT, handleRemoveParticipants);
 

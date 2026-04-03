@@ -21,6 +21,12 @@ export const handleInviteToChat: WSHandler = (data) => {
   const isSelfAdded = currentUserId && addedUsers.some((u) => u.uid === currentUserId);
 
   if (isSelfAdded) {
+    useChatInfoStore.getState().removeChatInfo(chatKey);
+
+    const queryClient = getQueryClient();
+    queryClient.removeQueries({ queryKey: ["chat-messages", chatKey] });
+    queryClient.removeQueries({ queryKey: ["participants", chatKey] });
+
     const chatListStore = useChatListStore.getState();
     if (!chatListStore.chatsByKey[chatKey]) {
       chatListStore.addNewChat(chatKey);

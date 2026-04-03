@@ -16,7 +16,7 @@ export const WS_ACTIONS = {
   REMOVE_MEMBERS_FROM_CHAT: "remove_members_from_chat",
   TRANSFER_OWNER: "transfer_owner",
 
-  JOIN_BY_INVITE_LINK: "join_by_invite_link",
+  MEMBER_ADDED: "member_added",
   SELF_JOIN_CHAT: "self_join_chat",
   LEAVE_CHAT: "leave_chat",
 
