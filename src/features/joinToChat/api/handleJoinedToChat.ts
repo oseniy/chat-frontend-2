@@ -3,6 +3,7 @@ import { InfiniteData } from "@tanstack/react-query";
 import { ChatParticipantListResponse } from "@/entities/chat/model/types";
 import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
 import { useParticipantsStore } from "@/entities/chat/model/useParticipantsStore";
+import { useUserStore } from "@/entities/user/model/userStore";
 import { getQueryClient } from "@/shared/api/getQueryClient";
 import { WSHandler } from "@/shared/api/ws/model/types";
 
@@ -23,6 +24,19 @@ export const handleJoinedToChat: WSHandler = (data) => {
   const joinedUser = obj.joined_user;
 
   if (!joinedUser) return;
+
+  const currentUserId = useUserStore.getState().userId;
+  const isSelfJoined = currentUserId && joinedUser.uid === currentUserId;
+
+  if (isSelfJoined) {
+    useChatInfoStore.getState().removeChatInfo(chatKey);
+
+    const queryClient = getQueryClient();
+    queryClient.removeQueries({ queryKey: ["chat-messages", chatKey] });
+    queryClient.removeQueries({ queryKey: ["participants", chatKey] });
+
+    return;
+  }
 
   const store = useChatInfoStore.getState();
   const existing = store.chatInfoByKey[chatKey];
