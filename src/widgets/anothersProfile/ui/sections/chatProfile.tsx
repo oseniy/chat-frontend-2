@@ -38,6 +38,7 @@ export const ChatProfile: React.FC<ChatProfileProps> = ({
   chatKey,
   canInvite,
 }) => {
+  console.log("initialParticipants from chatProfile: ", initialParticipants);
   const chatType =
     initialData?.type === "private-group" || initialData?.type === "public-group"
       ? "group"

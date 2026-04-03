@@ -30,6 +30,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     );
   } else {
     const initialParticipants = await getParticipantsServer(chatKey);
+    console.log("initialParticipants from page: ", initialParticipants);
     return (
       <ChatProfileClient
         initialParticipants={initialParticipants}

@@ -4,7 +4,7 @@ import {
   handleDeleteMessage,
   handleReadStatus,
 } from "@/features/chat/chat/api/ws/chatHandlers";
-import { handleJoinedToChat } from "@/features/inviteToChat/api/handleJoinedToChat";
+import { handleInviteToChat } from "@/features/inviteToChat/api/handleInviteToChat";
 import { handleLeaveChat } from "@/features/leaveChat/api/handleLeaveChat";
 import { handleRemoveParticipants } from "@/features/removeParticipant/api/handleRemoveParticipants";
 import { WS_ACTIONS } from "@/shared/constants/constants";
@@ -20,7 +20,7 @@ export const bootstrapWSHandlers = () => {
 
   registerWSHandler(WS_ACTIONS.EDIT_CHAT, handleEditChat);
 
-  registerWSHandler(WS_ACTIONS.ADD_MEMBERS_TO_CHAT, handleJoinedToChat);
+  registerWSHandler(WS_ACTIONS.ADD_MEMBERS_TO_CHAT, handleInviteToChat);
 
   registerWSHandler(WS_ACTIONS.REMOVE_MEMBERS_FROM_CHAT, handleRemoveParticipants);
 

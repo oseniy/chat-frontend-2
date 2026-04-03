@@ -28,6 +28,27 @@ export const useParticipantsSync = (
     const allFetchedParticipants = data.pages.flatMap((page) => page.results);
     const totalCount = data.pages[0]?.count ?? 0;
 
+    // Проверяем дубли
+    const uids = allFetchedParticipants.map((p) => p.uid);
+    const duplicates = uids.filter((uid, i) => uids.indexOf(uid) !== i);
+    console.warn(
+      "[useParticipantsSync] Синхронизация query→store, всего:",
+      uids.length,
+      "дубли:",
+      duplicates,
+      "pages count:",
+      data.pages.length,
+    );
+    if (duplicates.length > 0) {
+      console.warn("[useParticipantsSync] ДУБЛИКАТЫ НАЙДЕНЫ! uids:", duplicates);
+      data.pages.forEach((page, i) => {
+        console.warn(
+          `[useParticipantsSync] Page ${i}: count=${page.count}, results uids:`,
+          page.results.map((r) => r.uid),
+        );
+      });
+    }
+
     // Обновляем стор
     setParticipants(allFetchedParticipants, totalCount);
   }, [data, setParticipants]);

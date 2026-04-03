@@ -1,5 +1,9 @@
+import { InfiniteData } from "@tanstack/react-query";
+
+import { ChatParticipantListResponse } from "@/entities/chat/model/types";
 import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
 import { useParticipantsStore } from "@/entities/chat/model/useParticipantsStore";
+import { getQueryClient } from "@/shared/api/getQueryClient";
 import { WSHandler } from "@/shared/api/ws/model/types";
 
 type LeaveChatResponseObject = {
@@ -26,4 +30,21 @@ export const handleLeaveChat: WSHandler = (data) => {
     membersCount: existing.membersCount - 1,
     members: existing.members.filter((m) => m.uid != leftUser.uid),
   });
+
+  const queryClient = getQueryClient();
+  queryClient.setQueryData(
+    ["participants", chatKey],
+    (oldData: InfiniteData<ChatParticipantListResponse> | undefined) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page, i) => ({
+          ...page,
+          count: i === 0 ? Math.max(0, page.count - 1) : page.count,
+          results: page.results.filter((p) => p.uid !== leftUser.uid),
+        })),
+      };
+    },
+  );
+  queryClient.invalidateQueries({ queryKey: ["participants", chatKey] });
 };
