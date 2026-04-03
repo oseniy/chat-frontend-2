@@ -33,14 +33,6 @@ export const useParticipantsStore = create<ParticipantsState>((set) => ({
       const uniqueNewParticipants = newParticipants.filter(
         (nc) => !state.participants.some((sc) => sc.uid === nc.uid),
       );
-      console.warn(
-        "[ParticipantsStore.addParticipants] existing:",
-        state.participants.map((p) => p.uid),
-        "incoming:",
-        newParticipants.map((p) => p.uid),
-        "unique after filter:",
-        uniqueNewParticipants.map((p) => p.uid),
-      );
       return {
         participants: [...state.participants, ...uniqueNewParticipants],
         count: state.count + uniqueNewParticipants.length,

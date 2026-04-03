@@ -9,18 +9,11 @@ import { getQueryClient } from "@/shared/api/getQueryClient";
 import { WSHandler } from "@/shared/api/ws/model/types";
 
 export const handleInviteToChat: WSHandler = (data) => {
-  console.warn("[WS handleInviteToChat] Получено WS-сообщение:", JSON.stringify(data));
   if (data.status !== "OK" || !data.object) return;
 
   const obj = data.object as ChatObject;
   const chatKey = obj.chat_key;
   const addedUsers = obj.added_users ?? [];
-  console.warn(
-    "[WS handleInviteToChat] chatKey:",
-    chatKey,
-    "addedUsers uids:",
-    addedUsers.map((u) => u.uid),
-  );
 
   if (addedUsers.length === 0) return;
 
@@ -64,30 +57,15 @@ export const handleInviteToChat: WSHandler = (data) => {
       isInContacts: false,
     };
   });
-  console.warn(
-    "[WS handleInviteToChat] Добавляю в zustand store, uids:",
-    newParticipants.map((p) => p.uid),
-  );
-  console.warn(
-    "[WS handleInviteToChat] Текущие участники в store:",
-    useParticipantsStore.getState().participants.map((p) => p.uid),
-  );
   useParticipantsStore.getState().addParticipants(newParticipants);
 
   const queryClient = getQueryClient();
-  console.warn("[WS handleInviteToChat] Обновляю query cache для chatKey:", chatKey);
   queryClient.setQueryData(
     ["participants", chatKey],
     (oldData: InfiniteData<ChatParticipantListResponse> | undefined) => {
       if (!oldData) return oldData;
       const [firstPage, ...restPages] = oldData.pages;
-      const existingUids = firstPage?.results?.map((r) => r.uid) ?? [];
-      console.warn(
-        "[WS handleInviteToChat] setQueryData — existing uids:",
-        existingUids,
-        "adding uids:",
-        newParticipants.map((p) => p.uid),
-      );
+
       return {
         ...oldData,
         pages: [
@@ -101,6 +79,5 @@ export const handleInviteToChat: WSHandler = (data) => {
       };
     },
   );
-  console.warn("[WS handleInviteToChat] Инвалидирую query cache");
   queryClient.invalidateQueries({ queryKey: ["participants", chatKey] });
 };

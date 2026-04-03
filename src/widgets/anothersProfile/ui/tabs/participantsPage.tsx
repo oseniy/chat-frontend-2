@@ -28,7 +28,6 @@ export const ParticipantsPage: React.FC<ParticipantsPageProps> = ({
   isOwner,
 }) => {
   const [search, setSearch] = useState("");
-  console.log("initialParticipants from part page: ", initialParticipants);
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = useParticipantsSync(
     chatKey,
     initialParticipants,

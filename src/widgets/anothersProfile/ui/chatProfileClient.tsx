@@ -42,7 +42,6 @@ export const ChatProfileClient: React.FC<ChatProfileClientProps> = ({
   chatInfo,
   initialParticipants,
 }) => {
-  console.log("initialParticipants from client: ", initialParticipants);
   const { activeSection, activeTab, setActiveTab, resetTabsUI, setActiveSection } =
     useAnothersProfileUIStore(
       useShallow((s) => ({
