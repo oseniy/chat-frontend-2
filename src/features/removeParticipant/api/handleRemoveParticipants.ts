@@ -3,6 +3,8 @@ import { InfiniteData } from "@tanstack/react-query";
 import { ChatObject, ChatParticipantListResponse } from "@/entities/chat/model/types";
 import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
 import { useParticipantsStore } from "@/entities/chat/model/useParticipantsStore";
+import { useUserStore } from "@/entities/user/model/userStore";
+import { useChatListStore } from "@/features/chatList/model/useChatListStore";
 import { getQueryClient } from "@/shared/api/getQueryClient";
 import { WSHandler } from "@/shared/api/ws/model/types";
 
@@ -16,6 +18,21 @@ export const handleRemoveParticipants: WSHandler = (data) => {
   if (removedUsers.length === 0) return;
 
   const removedUids = removedUsers.map((u) => u.uid);
+
+  const currentUserId = useUserStore.getState().userId;
+  const isSelfRemoved = currentUserId && removedUids.includes(currentUserId);
+
+  if (isSelfRemoved) {
+    const chatListStore = useChatListStore.getState();
+    if (chatListStore.chatsByKey[chatKey]) {
+      chatListStore.removeChat(chatKey);
+    }
+
+    if (window.location.pathname.includes(`/chats/${chatKey}`)) {
+      window.location.href = "/chats";
+    }
+    return;
+  }
 
   useParticipantsStore.getState().removeParticipants(removedUids);
 
