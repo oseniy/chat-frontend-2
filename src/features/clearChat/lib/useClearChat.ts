@@ -20,7 +20,11 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const closeModal = useModalStore((s) => s.closeModal);
+
+  // Добавляем методы очистки медиа и файлов из стора
   const clearMessages = useChatStore((s) => s.clearMessages);
+  const clearMedia = useChatStore((s) => s.clearMedia);
+  const clearFiles = useChatStore((s) => s.clearFiles);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -41,7 +45,6 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
   const confirmClear = useCallback(async () => {
     setIsLoading(true);
 
-    // Получаем chatKey из store для optimistic update
     const { chatsByKey } = useChatListStore.getState();
     const chatKey = Object.keys(chatsByKey).find((key) => chatsByKey[key].id === chatId);
 
@@ -49,7 +52,7 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
       // 1. API запрос на очистку
       await clearChat({ index: chatId });
 
-      // 2. Optimistic update - мгновенное обновление UI
+      // 2. Optimistic update
       if (chatKey) {
         useChatListStore.getState().patchChat(chatKey, {
           lastMessage: null,
@@ -58,10 +61,12 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
         });
       }
 
-      // 3. Очищаем сообщения в открытом окне чата
+      // 3. Очищаем сообщения, медиа и файлы в сторе мгновенно
       clearMessages();
+      clearMedia();
+      clearFiles();
 
-      // 4. Invalidate для фоновой перезагрузки (гарантия актуальности)
+      // 4. Invalidate для фоновой перезагрузки
       queryClient.invalidateQueries({ queryKey: ["chats"] });
 
       // 5. Закрываем модалку и показываем успех
@@ -75,7 +80,16 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
     } finally {
       setIsLoading(false);
     }
-  }, [closeModal, showToast, toastMessage, clearMessages, chatId, queryClient]);
+  }, [
+    closeModal,
+    showToast,
+    toastMessage,
+    clearMessages,
+    clearMedia,
+    clearFiles,
+    chatId,
+    queryClient,
+  ]);
 
   return {
     isLoading,

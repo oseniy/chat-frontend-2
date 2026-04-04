@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { getChatFiles } from "@/entities/chat/api/getChatFiles"; // Импортируем новый API
 import { MappedChatMessage, MappedMessageFile } from "@/features/chat/chat/model/types/mappedTypes";
 import { MESSAGE_STATUS } from "@/shared/constants/constants";
 
@@ -12,9 +13,17 @@ interface ChatState {
   chatKey: string | null;
   chatType: ChatType | null;
   createdBy: string | null;
+
+  // Медиа
   media: MappedMessageFile[];
   isLoadingMedia: boolean;
   isMediaLoaded: boolean;
+
+  // Файлы (Добавленные поля)
+  files: MappedMessageFile[];
+  isLoadingFiles: boolean;
+  isFilesLoaded: boolean;
+
   chatUid: string | null;
   isReady: boolean;
   isHide: boolean;
@@ -25,6 +34,7 @@ interface ChatState {
   forwardTargets: MappedChatMessage[];
 
   fetchMedia: (chatKey: string) => Promise<void>;
+  fetchFiles: (chatKey: string) => Promise<void>; // Добавленный метод
 
   setReplyTarget: (message: MappedChatMessage | null) => void;
   setForwardTargets: (messages: MappedChatMessage[]) => void;
@@ -62,6 +72,7 @@ interface ChatState {
   clearForwardTargets: () => void;
   clearReplyTarget: () => void;
   clearMedia: () => void;
+  clearFiles: () => void; // Добавленный метод
   reset: () => void;
 }
 
@@ -72,9 +83,16 @@ export const useChatStore = create<ChatState>((set) => ({
   chatUid: null,
   isReady: false,
   chatId: null,
+
   isLoadingMedia: false,
   isMediaLoaded: false,
   media: [],
+
+  // Инициализация файлов
+  files: [],
+  isLoadingFiles: false,
+  isFilesLoaded: false,
+
   isHide: false,
   replyTarget: null,
   forwardTargets: [],
@@ -125,6 +143,31 @@ export const useChatStore = create<ChatState>((set) => ({
       set({ media: imagesOnly, isLoadingMedia: false, isMediaLoaded: true });
     } catch {
       set({ isLoadingMedia: false, isMediaLoaded: false });
+    }
+  },
+
+  // Реализация fetchFiles
+  // Внутри useChatStore (метод fetchFiles):
+  fetchFiles: async (chatKey: string) => {
+    if (!chatKey) return;
+
+    // Очищаем старые файлы сразу при старте загрузки
+    set({
+      isLoadingFiles: true,
+      files: [],
+      isFilesLoaded: false,
+    });
+
+    try {
+      const data = await getChatFiles(chatKey);
+      set({
+        files: data,
+        isLoadingFiles: false,
+        isFilesLoaded: true,
+      });
+    } catch (error) {
+      set({ isLoadingFiles: false, isFilesLoaded: false });
+      console.error("Ошибка загрузки файлов:", error);
     }
   },
 
@@ -224,6 +267,9 @@ export const useChatStore = create<ChatState>((set) => ({
   clearMessages: () => set({ messages: [], replyTarget: null }),
 
   clearMedia: () => set({ media: [], isLoadingMedia: false, isMediaLoaded: false }),
+
+  clearFiles: () => set({ files: [], isLoadingFiles: false, isFilesLoaded: false }),
+
   reset: () =>
     set({
       messages: [],
@@ -232,8 +278,10 @@ export const useChatStore = create<ChatState>((set) => ({
       isReady: false,
       replyTarget: null,
       media: [],
+      files: [],
       isLoadingMedia: false,
       isMediaLoaded: false,
-      // forwardTargets: [],
+      isLoadingFiles: false,
+      isFilesLoaded: false,
     }),
 }));
