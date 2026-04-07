@@ -9,6 +9,7 @@ import { handleDeleteChat } from "@/features/deleteChatGlobal/api/handleDeleteCh
 import { handleInviteToChat } from "@/features/inviteToChat/api/handleInviteToChat";
 import { handleJoinedToChat } from "@/features/joinToChat/api/handleJoinedToChat";
 import { handleLeaveChat } from "@/features/leaveChat/api/handleLeaveChat";
+import { handleOwnerTransferred } from "@/features/makeAdmin/api/handleOwnerTransferred";
 import { handleRemoveParticipants } from "@/features/removeParticipant/api/handleRemoveParticipants";
 import { WS_ACTIONS } from "@/shared/constants/constants";
 
@@ -34,4 +35,6 @@ export const bootstrapWSHandlers = () => {
   registerWSHandler(WS_ACTIONS.CREATE_CHAT, handleCreateChat);
 
   registerWSHandler(WS_ACTIONS.DELETE_CHAT, handleDeleteChat);
+
+  registerWSHandler(WS_ACTIONS.OWNER_TRANSFERRED, handleOwnerTransferred);
 };
