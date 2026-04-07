@@ -69,7 +69,18 @@ export const UserForm: React.FC<UserFormProps> = ({ className }) => {
               id="firstName"
               label="Введите имя"
               error={errors.firstName?.message}
-              {...register("firstName")}
+              {...register("firstName", {
+                onChange: (e) => {
+                  let value = e.target.value;
+
+                  value = value
+                    .replace(/\s*-\s*/g, "-")
+                    .replace(/\s{2,}/g, " ")
+                    .replace(/^\s+/, "");
+
+                  e.target.value = value;
+                },
+              })}
             />
 
             <NicknameInput name="nickname" />
