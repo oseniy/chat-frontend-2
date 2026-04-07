@@ -33,7 +33,7 @@ export default function Page() {
   return (
     <BackgroundCardLayout variant="form" className="pt-6">
       <AuthHeader
-        backHref="/auth/code"
+        backHref="/auth/phone"
         logoSize="sm"
         className="desktop:justify-center desktop:mt-12 desktop:pr-0 mt-5 justify-end pr-4"
         classBackButton="absolute desktop:left-20 top-2 left-8"

@@ -6,7 +6,7 @@ export default function Page() {
   return (
     <BackgroundCardLayout variant={"form"} className="flex flex-col pt-6">
       <AuthHeader
-        backHref="/auth/code"
+        backHref="/auth/phone"
         logoSize="sm"
         className="desktop:mt-12 mt-5"
         classBackButton="absolute desktop:left-20 top-2 left-8"
