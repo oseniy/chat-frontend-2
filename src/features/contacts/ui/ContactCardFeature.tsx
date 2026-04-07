@@ -2,7 +2,7 @@
 
 import { Contact } from "@/entities/contact/model/types";
 import { ContactCard } from "@/entities/contact/ui/contactCard";
-import { Checkbox } from "@/shared/ui/checkbox";
+import { Checkbox } from "@/shared/ui/checkBox";
 
 import { useSelectContactsStore } from "../model/SelectContactsStore";
 
