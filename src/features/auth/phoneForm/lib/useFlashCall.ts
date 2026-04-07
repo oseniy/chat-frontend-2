@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { saveFlashCallAuthAction } from "src/features/auth/phoneForm/lib/actions/saveFlashCallAuth.ts";
 
+import { saveFlashCallAuthAction } from "@/features/auth/phoneForm/lib/actions/saveFlashCallAuth.ts";
 import { saveIsFilledToCookie } from "@/shared/api/actions/saveIsFilledToCookie";
 import { saveTokenToCookie } from "@/shared/api/actions/saveTokenToCookie";
 import { API_CONFIG } from "@/shared/api/base";
@@ -9,7 +9,7 @@ import { useAuthStore } from "@/shared/api/store";
 export const useFlashCall = () => {
   const [stage, setStage] = useState<"idle" | "calling" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
-  const [callNumber, setCallNumber] = useState<string | null>(null);
+  const [callNumber, setCallNumber] = useState<string | null>(null); // Номер для отображения пользователю
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { setAccessToken } = useAuthStore();
@@ -24,17 +24,14 @@ export const useFlashCall = () => {
 
   const start = useCallback(
     async (phone: string) => {
-      if (!BASE_URL) {
-        setError("API URL не настроен");
-        return;
-      }
+      if (!BASE_URL) return setError("API URL не настроен");
 
       setStage("calling");
       setError(null);
       setCallNumber(null);
 
       try {
-        // 1. START - Запрос на инициацию звонка
+        // 1. СТАРТ СЕССИИ
         const res = await fetch(`${BASE_URL}/api/v1/auth/providers/plusofon/flash-call/start/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -43,17 +40,17 @@ export const useFlashCall = () => {
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
-          if (res.status === 409) throw new Error("Сессия уже активна. Подождите.");
+          if (res.status === 409) throw new Error("Сессия уже активна.");
           throw new Error(errorData.message || `Ошибка сервера: ${res.status}`);
         }
 
-        const { session_uid, session_secret, poll_interval_seconds, call_number } =
-          await res.json();
+        const dataStart = await res.json();
+        const { session_uid, session_secret, poll_interval_seconds, call_number } = dataStart;
 
-        // Сохраняем номер, на который пользователю нужно будет позвонить
+        // Сохраняем номер, на который пользователю нужно будет позвонить (или с которого позвонят)
         setCallNumber(call_number);
 
-        // 2. STATUS POLLING - Опрос статуса сессии
+        // 2. ПОЛЛИНГ СТАТУСА
         pollingRef.current = setInterval(
           async () => {
             try {
@@ -67,12 +64,12 @@ export const useFlashCall = () => {
               );
 
               if (!statusRes.ok) return;
-              const data = await statusRes.json();
+              const statusData = await statusRes.json();
 
-              if (data.status === "verified") {
+              if (statusData.status === "verified") {
                 stopPolling();
 
-                // 3. CLAIM TOKENS - Получение JWT токенов
+                // 3. ПОЛУЧЕНИЕ ТОКЕНОВ (CLAIM)
                 const claimRes = await fetch(
                   `${BASE_URL}/api/v1/auth/providers/plusofon/flash-call/claim/${session_uid}/`,
                   {
@@ -85,29 +82,27 @@ export const useFlashCall = () => {
                 if (claimRes.ok) {
                   const tokens = await claimRes.json();
 
-                  // Сохранение сессии в куки (Server Actions)
+                  // Сохраняем всю сессию в куки и стор
                   await saveFlashCallAuthAction(tokens.refresh);
                   await saveTokenToCookie(tokens.access);
                   await saveIsFilledToCookie(tokens.is_filled ?? false);
 
-                  // Обновляем локальный стейт
                   setAccessToken(tokens.access);
                   setStage("success");
 
-                  // Редирект в чат с полной перезагрузкой для AuthProvider
                   setTimeout(() => {
-                    window.location.href = "/chat";
-                  }, 400);
+                    window.location.href = "/chats";
+                  }, 500);
                 }
               }
 
-              if (data.status === "expired" || data.status === "failed") {
+              if (statusData.status === "expired" || statusData.status === "failed") {
                 stopPolling();
                 setStage("error");
-                setError("Время ожидания вызова истекло.");
+                setError("Время ожидания истекло. Попробуйте еще раз.");
               }
             } catch (e) {
-              console.error("Polling error:", e);
+              console.error("Status check error:", e);
             }
           },
           (poll_interval_seconds || 2) * 1000,
@@ -115,8 +110,7 @@ export const useFlashCall = () => {
       } catch (err: unknown) {
         stopPolling();
         setStage("error");
-        const errorMessage = err instanceof Error ? err.message : "Произошла ошибка";
-        setError(errorMessage);
+        setError(err instanceof Error ? err.message : "Ошибка авторизации");
       }
     },
     [BASE_URL, setAccessToken, stopPolling],
