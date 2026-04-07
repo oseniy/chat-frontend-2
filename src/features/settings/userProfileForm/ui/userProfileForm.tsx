@@ -92,14 +92,36 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
             id="name"
             label="Изменить имя"
             error={errors.name?.message}
-            {...register("name")}
+            {...register("name", {
+              onChange: (e) => {
+                let value = e.target.value;
+
+                value = value
+                  .replace(/\s*-\s*/g, "-")
+                  .replace(/\s{2,}/g, " ")
+                  .replace(/^\s+/, "");
+
+                e.target.value = value;
+              },
+            })}
             inputClassName="desktop:border-0 font-normal"
           />
           <FormInput
             id="lastName"
             label="Изменить фамилию"
             error={errors.lastName?.message}
-            {...register("lastName")}
+            {...register("lastName", {
+              onChange: (e) => {
+                let value = e.target.value;
+
+                value = value
+                  .replace(/\s*-\s*/g, "-")
+                  .replace(/\s{2,}/g, " ")
+                  .replace(/^\s+/, "");
+
+                e.target.value = value;
+              },
+            })}
             inputClassName="desktop:border-0 font-normal"
           />
 

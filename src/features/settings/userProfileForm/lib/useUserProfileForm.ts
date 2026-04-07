@@ -3,8 +3,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { uploadAvatar } from "@/entities/user/api/uploadAvatar"; // Наше новое API
-import { User } from "@/entities/user/model/types"; // Наша новая типизация
+import { uploadAvatar } from "@/entities/user/api/uploadAvatar";
+import { User } from "@/entities/user/model/types";
+import { deleteAvatar } from "@/features/createChat/api/deleteAvatar";
 
 import { getDefaultBirthday } from "./getDefaultBirthday";
 
@@ -39,9 +40,6 @@ export const useUserProfileForm = ({ avatarUrl, birthday }: UseUserProfileFormPr
     birthday: getDefaultBirthday(birthday),
   });
 
-  /**
-   * Мутация загрузки аватара (использует наш новый Result тип)
-   */
   const avatarMutation = useMutation({
     mutationFn: async (file: File) => {
       const res = await uploadAvatar(file);
@@ -50,7 +48,7 @@ export const useUserProfileForm = ({ avatarUrl, birthday }: UseUserProfileFormPr
     },
     onSuccess: (data) => {
       if (data?.file_url) {
-        setCurrentAvatarUrl(data.file_url);
+        setTimeout(() => setCurrentAvatarUrl(data.file_url), 500);
       }
       queryClient.invalidateQueries({ queryKey: ["messenger-profile"] });
     },
@@ -59,15 +57,9 @@ export const useUserProfileForm = ({ avatarUrl, birthday }: UseUserProfileFormPr
     },
   });
 
-  /**
-   * Мутация удаления аватара
-   * Если API поддерживает отправку null для удаления, используем ту же функцию
-   */
   const deleteAvatarMutation = useMutation({
     mutationFn: async () => {
-      // Здесь предполагается, что API умеет обрабатывать удаление.
-      // Если нужен другой эндпоинт, замените вызов.
-      const res = await uploadAvatar(null);
+      const res = await deleteAvatar();
       if (!res.success) throw new Error(res.error);
       return res.data;
     },

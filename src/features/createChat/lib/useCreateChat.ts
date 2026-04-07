@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 
 import { fileToBase64 } from "@/shared/lib/files/fileToBase64";
 
+import { deleteAvatar } from "../api/deleteAvatar";
 import { formSchema } from "../model/schema";
 import { useCreateChatStore } from "../model/store";
 import { CreateChatFormValues } from "../model/types";
@@ -38,7 +39,9 @@ export const useCreateChat = () => {
     setIsAvatarModalOpen(false);
   };
 
-  const handleAvatarDelete = () => {
+  const handleAvatarDelete = async () => {
+    console.log("handleAvatarDelete");
+    await deleteAvatar();
     form.setValue("avatar", null);
     setPreviewUrl("");
     setIsAvatarModalOpen(false);
