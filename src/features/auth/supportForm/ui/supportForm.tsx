@@ -27,6 +27,8 @@ export const SupportForm: React.FC<SupportFormProps> = ({ className, onSubmit })
     defaultValues: { email: "", text: "" },
   });
 
+  const emailField = register("email");
+
   return (
     <form
       className={cn("desktop:gap-0 flex h-full flex-col gap-3", className)}
@@ -37,8 +39,20 @@ export const SupportForm: React.FC<SupportFormProps> = ({ className, onSubmit })
         label="Укажите Ваш e-mail"
         placeholder="e-mail"
         id="email"
-        {...register("email")}
         error={errors.email?.message}
+        {...emailField}
+        onChange={(e) => {
+          const raw = e.target.value;
+          const value = raw.replace(/\s+/g, "");
+
+          if (!value && raw.length > 0) {
+            e.target.value = "";
+            return;
+          }
+
+          e.target.value = value;
+          emailField.onChange(e);
+        }}
         className="desktop:mb-3"
       />
 

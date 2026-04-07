@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/shadcn/ui/alert-dialog";
 import { Button } from "@/shared/shadcn/ui/button";
-import { Checkbox } from "@/shared/ui/checkbox";
+import { Checkbox } from "@/shared/ui/checkBox";
 
 import { deleteMessagesBulkUseCase } from "./lib/deleteMessagesBulk.useCase";
 
@@ -43,7 +43,7 @@ export const DeleteMessageModal: React.FC<DeleteMessageModalProps> = ({
     exitSelectionMode,
   } = useChatStore.getState();
 
-  const [isChecked, setIsChecked] = useState(false);
+  const [isChecked, setIsChecked] = useState(true);
 
   const messageIds = isSelectionMode
     ? Array.from(selectedMessageUids)
