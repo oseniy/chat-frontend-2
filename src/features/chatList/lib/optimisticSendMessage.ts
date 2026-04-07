@@ -18,7 +18,6 @@ export const optimisticSendMessage = ({
   };
 }) => {
   const unreadMessages = useChatListStore.getState().chatsByKey[chatKey]?.unreadMessages;
-  console.log("optimisticSendMessage", message);
   useChatListStore.getState().patchChat(chatKey, {
     lastMessage: {
       id: message.id,

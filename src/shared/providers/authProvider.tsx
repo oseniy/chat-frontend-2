@@ -7,13 +7,7 @@ import { onAuthChannelMessage } from "../api/authChannel";
 import { logout } from "../api/logout";
 import { useAuthStore } from "../api/store";
 
-const PUBLIC_ROUTES = [
-  "/auth",
-  "/auth/phone",
-  "/auth/code",
-  "/auth/support",
-  "/auth/support/success",
-];
+const PUBLIC_ROUTES = ["/auth", "/auth/phone", "/auth/support", "/auth/support/success"];
 
 interface AuthProviderProps {
   children: React.ReactNode;

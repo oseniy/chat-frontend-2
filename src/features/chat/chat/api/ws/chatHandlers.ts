@@ -154,8 +154,6 @@ export const handleReadStatus: WSHandler = (data) => {
 
   useChatListStore.getState().patchChat(chatKey, patch);
 
-  console.log("handleReadStatus patched", useChatListStore.getState().chatsByKey[chatKey]);
-
   return;
 };
 

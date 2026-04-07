@@ -16,9 +16,13 @@ export const ResponsiveLayout = ({ children, sidebar, extra }: ResponsiveLayoutP
   const pathParts = pathname.split("/").filter(Boolean);
 
   // 1. Условие для области EXTRA (Профиль в чате)
-  // Маршрут: /chats/{id}/profile
+  // Маршрут: /chats/{id}/profile или /chats/{chatKey}/participant/{uid}/profile
   const isExtraActive =
-    pathParts[0] === "chats" && pathParts.length === 3 && pathParts[2] === "profile";
+    (pathParts[0] === "chats" && pathParts.length === 3 && pathParts[2] === "profile") ||
+    (pathParts[0] === "chats" &&
+      pathParts.length === 5 &&
+      pathParts[2] === "participant" &&
+      pathParts[4] === "profile");
 
   // 2. Условие для области MAIN (Сам чат или страница приглашения)
   // Маршрут: /chats/{id}, /chats/{uid} или /chats/join/{chatKey}

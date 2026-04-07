@@ -2,14 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 const protectedRoutes = ["/chats", "/auth/success", "/settings"];
-const authRoutes = [
-  "/auth",
-  "/auth/phone",
-  "/auth/code",
-  "/auth/support",
-  "/auth/support/success",
-  "/auth/user",
-];
+const authRoutes = ["/auth", "/auth/phone", "/auth/support", "/auth/support/success", "/auth/user"];
 
 // Минимальный парсер JWT для проверки срока жизни (exp)
 function isTokenExpired(token: string): boolean {

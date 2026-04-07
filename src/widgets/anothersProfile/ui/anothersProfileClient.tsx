@@ -24,12 +24,14 @@ type AnothersProfileClientProps = {
   chatType: ChatTypeLight;
   chatInfo: User | null;
   contacts: ContactListResponse | null;
+  chatKey?: string;
 };
 
 export const AnothersProfileClient: React.FC<AnothersProfileClientProps> = ({
   chatType,
   chatInfo,
   contacts,
+  chatKey: chatKeyProp,
 }) => {
   const { activeSection, activeTab, setActiveTab, resetTabsUI } = useAnothersProfileUIStore(
     useShallow((s) => ({
@@ -63,7 +65,7 @@ export const AnothersProfileClient: React.FC<AnothersProfileClientProps> = ({
   });
 
   const tabs: Record<string, React.ReactNode> = {
-    media: <MediaPage />,
+    media: <MediaPage chatKey={chatKeyProp} />,
     files: <FilesPage />,
     voices: <VoicesPage />,
     links: <LinksPage />,
@@ -88,6 +90,7 @@ export const AnothersProfileClient: React.FC<AnothersProfileClientProps> = ({
           initialData={displayData}
           contactsInitialData={contacts}
           isMobile={isMobile}
+          chatKey={chatKeyProp}
         />
       ) : (
         tabs[activeTab] || <LinksPage />

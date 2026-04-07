@@ -1,130 +1,173 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { saveFlashCallAuthAction } from "src/features/auth/phoneForm/lib/actions/saveFlashCallAuth.ts";
+"use client";
+
+import { useEffect } from "react";
 
 import { saveIsFilledToCookie } from "@/shared/api/actions/saveIsFilledToCookie";
-import { saveTokenToCookie } from "@/shared/api/actions/saveTokenToCookie";
-import { API_CONFIG } from "@/shared/api/base";
 import { useAuthStore } from "@/shared/api/store";
 
-export const useFlashCall = () => {
-  const [stage, setStage] = useState<"idle" | "calling" | "success" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [callNumber, setCallNumber] = useState<string | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+import { sendCode } from "../../phoneForm/api/sendCode";
+import { loginByCodeAction } from "../actions/api/loginByCodeAction";
+import { VerificationResult } from "../model/types";
+import { useVerificationStore } from "../model/userVerificationStore";
+
+type UseVerificationOptions = {
+  phone_number: string;
+  initialAttemptsLeft?: number;
+  resendBlockTime?: number;
+  banTime?: {
+    firstBan: number;
+    repeatBan: number;
+  };
+};
+
+const DEFAULTS = {
+  initialAttemptsLeft: 5,
+  resendBlockTime: 120,
+  banTime: { firstBan: 600, repeatBan: 3599 },
+} as const;
+
+export const useVerification = ({
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  phone_number,
+  resendBlockTime = DEFAULTS.resendBlockTime,
+  banTime = DEFAULTS.banTime,
+}: UseVerificationOptions) => {
+  const {
+    attemptsLeft,
+    banLevel,
+    lastResendAt,
+    banUntil,
+
+    resendTimer,
+    isResendAvailable,
+    isBanned,
+    isCodeExpired,
+
+    setAttemptsLeft,
+    setBanLevel,
+    setLastResendAt,
+    setBanUntil,
+    setResendTimer,
+    setIsResendAvailable,
+    setIsBanned,
+    setIsCodeExpired,
+    hasHydrated,
+    resetVerification,
+  } = useVerificationStore();
 
   const { setAccessToken } = useAuthStore();
-  const BASE_URL = API_CONFIG.baseURL;
-
-  const stopPolling = useCallback(() => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
-    }
-  }, []);
-
-  const start = useCallback(
-    async (phone: string) => {
-      if (!BASE_URL) {
-        setError("API URL не настроен");
-        return;
-      }
-
-      setStage("calling");
-      setError(null);
-      setCallNumber(null);
-
-      try {
-        // 1. START - Запрос на инициацию звонка
-        const res = await fetch(`${BASE_URL}/api/v1/auth/providers/plusofon/flash-call/start/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone_number: phone }),
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          if (res.status === 409) throw new Error("Сессия уже активна. Подождите.");
-          throw new Error(errorData.message || `Ошибка сервера: ${res.status}`);
-        }
-
-        const { session_uid, session_secret, poll_interval_seconds, call_number } =
-          await res.json();
-
-        // Сохраняем номер, на который пользователю нужно будет позвонить
-        setCallNumber(call_number);
-
-        // 2. STATUS POLLING - Опрос статуса сессии
-        pollingRef.current = setInterval(
-          async () => {
-            try {
-              const statusRes = await fetch(
-                `${BASE_URL}/api/v1/auth/providers/plusofon/flash-call/status/${session_uid}/`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ session_secret }),
-                },
-              );
-
-              if (!statusRes.ok) return;
-              const data = await statusRes.json();
-
-              if (data.status === "verified") {
-                stopPolling();
-
-                // 3. CLAIM TOKENS - Получение JWT токенов
-                const claimRes = await fetch(
-                  `${BASE_URL}/api/v1/auth/providers/plusofon/flash-call/claim/${session_uid}/`,
-                  {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ session_secret }),
-                  },
-                );
-
-                if (claimRes.ok) {
-                  const tokens = await claimRes.json();
-
-                  // Сохранение сессии в куки (Server Actions)
-                  await saveFlashCallAuthAction(tokens.refresh);
-                  await saveTokenToCookie(tokens.access);
-                  await saveIsFilledToCookie(tokens.is_filled ?? false);
-
-                  // Обновляем локальный стейт
-                  setAccessToken(tokens.access);
-                  setStage("success");
-
-                  // Редирект в чат с полной перезагрузкой для AuthProvider
-                  setTimeout(() => {
-                    window.location.href = "/chat";
-                  }, 400);
-                }
-              }
-
-              if (data.status === "expired" || data.status === "failed") {
-                stopPolling();
-                setStage("error");
-                setError("Время ожидания вызова истекло.");
-              }
-            } catch (e) {
-              console.error("Polling error:", e);
-            }
-          },
-          (poll_interval_seconds || 2) * 1000,
-        );
-      } catch (err: unknown) {
-        stopPolling();
-        setStage("error");
-        const errorMessage = err instanceof Error ? err.message : "Произошла ошибка";
-        setError(errorMessage);
-      }
-    },
-    [BASE_URL, setAccessToken, stopPolling],
-  );
 
   useEffect(() => {
-    return () => stopPolling();
-  }, [stopPolling]);
+    if (!hasHydrated) return;
+    if (lastResendAt !== null) return;
 
-  return { start, stage, error, callNumber };
+    const now = Date.now();
+    setLastResendAt(now);
+    setIsResendAvailable(false);
+    setResendTimer(resendBlockTime);
+  }, [hasHydrated, lastResendAt, resendBlockTime]);
+
+  useEffect(() => {
+    const updateTimers = () => {
+      const now = Date.now();
+
+      const sinceLastResendSec = lastResendAt ? (now - lastResendAt) / 1000 : Infinity;
+      const resendRemaining = Math.max(0, resendBlockTime - sinceLastResendSec);
+
+      const banRemaining = banUntil > 0 ? Math.max(0, (banUntil - now) / 1000) : 0;
+
+      const remaining = Math.ceil(Math.max(resendRemaining, banRemaining));
+
+      setResendTimer(remaining);
+      setIsResendAvailable(resendRemaining <= 0 && banRemaining <= 0);
+      setIsBanned(banRemaining > 0);
+      if (banRemaining <= 0 && isBanned) {
+        setAttemptsLeft(() => 1);
+      }
+    };
+
+    updateTimers();
+
+    const interval = setInterval(updateTimers, 1000);
+
+    return () => clearInterval(interval);
+  }, [lastResendAt, banUntil, resendBlockTime, isBanned]);
+
+  const applyBan = () => {
+    const level = banLevel + 1;
+    const durationSec = level === 1 ? banTime.firstBan : banTime.repeatBan;
+
+    setBanUntil(Date.now() + durationSec * 1000);
+    setBanLevel(level);
+    setIsBanned(true);
+  };
+
+  const onComplete = async (code: string): Promise<VerificationResult> => {
+    if (isBanned || !code || code.length !== 5) {
+      return { success: false };
+    }
+
+    const response = await loginByCodeAction({ phone_number, code });
+
+    if (!response.success) {
+      setAttemptsLeft((prev) => {
+        const next = prev - 1;
+        if (next <= 0) {
+          applyBan();
+        }
+        return Math.max(0, next);
+      });
+      const isExpired = response.error.includes("истек") || response.error.includes("Запросите");
+
+      if (isExpired) {
+        setIsCodeExpired(true);
+      }
+      return {
+        success: false,
+        error: response.error,
+      };
+    }
+
+    if (response.access_token) {
+      setIsCodeExpired(false);
+      setAccessToken(response.access_token);
+      await saveIsFilledToCookie(response.is_filled ?? false);
+      resetVerification();
+      return { success: true, is_filled: response.is_filled };
+    }
+
+    return { success: false };
+  };
+
+  const onResend = async () => {
+    if (!isResendAvailable) return;
+
+    // resetVerification();
+    // setLastResendAt(Date.now());
+    // setResendTimer(resendBlockTime);
+    // setIsResendAvailable(false);
+    // setIsCodeExpired(false);
+    const result = await sendCode({
+      phone_number: phone_number.replaceAll(" ", ""),
+      code_length: 5,
+    });
+
+    if (result.success) {
+      resetVerification();
+    } else {
+      alert(result.error);
+    }
+  };
+
+  return {
+    attemptsLeft,
+    banLevel,
+    resendTimer,
+    isBanned,
+    isResendAvailable,
+    isCodeExpired,
+    setIsCodeExpired,
+    onComplete,
+    onResend,
+  };
 };

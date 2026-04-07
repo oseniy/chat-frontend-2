@@ -23,7 +23,6 @@ export const ChatList: React.FC<ChatListProps> = ({ chats, isSearch }) => {
 
   const actions = useChatListActions();
 
-  console.log(chats);
   return (
     <>
       {chats.length > 0 ? (
