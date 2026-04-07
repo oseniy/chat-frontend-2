@@ -30,13 +30,13 @@ export const ChatFooter: React.FC<ChatFooterProps> = ({
       <footer
         style={{ paddingBottom: "var(--keyboard-offset)" }}
         className={cn(
-          "bg-primary-gray/90 desktop:bg-main-light-gray border-muted relative w-full shrink-0 border-t",
+          "bg-primary-gray/90 desktop:bg-main-light-gray border-muted @container relative w-full shrink-0 border-t",
           className,
         )}
       >
         {join ? (
-          <div className="bg-primary-accent-light desktop:left-1/2 desktop:w-186 desktop:-translate-x-1/2 absolute bottom-0 left-0 flex min-h-15 w-full flex-row items-center gap-2.5 px-4 py-2">
-            <span className="text-gray desktop:text-base grow text-center text-sm leading-[130%] font-normal tracking-[0.01em]">
+          <div className="bg-primary-accent-light absolute bottom-0 left-0 flex min-h-15 w-full flex-row items-center gap-2.5 px-4 py-2 @3xl:left-1/2 @3xl:w-186 @3xl:-translate-x-1/2">
+            <span className="text-gray grow text-center text-sm leading-[130%] font-normal tracking-[0.01em] @3xl:text-base">
               Вступите в группу, чтобы открыть доступ к отправке сообщений
             </span>
           </div>

@@ -14,9 +14,10 @@ export interface UserProfile {
 export interface MessageFile {
   id: number;
   uid: string;
-  file: string;
+  file: string | File;
   file_url: string;
   file_webp?: string | null;
+  name?: string;
   file_webp_url?: string;
   file_type?: string | null;
   new: boolean;
@@ -39,6 +40,7 @@ export interface ForwardedMessage {
   uid: string;
   from_user: string;
   avatar: string;
+  avatar_webp_url: string | null;
   content: string;
   files_list: MessageFile[];
   first_name: string;

@@ -10,22 +10,22 @@ type MessageGroupProps = {
   messages: MappedChatMessage[];
   currentUserId: string;
   passDataAttributes?: boolean;
+  chatId?: number;
   isGroup?: boolean;
 };
 
-// Используем анонимную функцию для обхода naming-convention
 const messageGroupComponent = memo(
   ({
     label,
     messages,
     currentUserId,
+    chatId,
     isGroup = false,
     passDataAttributes = false,
   }: MessageGroupProps) => {
     const firstMsg = messages[0];
     const isChannel =
       firstMsg?.chatType === "public-channel" || firstMsg?.chatType === "private-channel";
-
     return (
       <div className="flex w-full flex-col">
         <DateBadge label={label} className="desktop:mb-5 mb-3" />
@@ -37,7 +37,6 @@ const messageGroupComponent = memo(
           const isLastInGroup = isGroup && msg.fromUser.uid !== next?.fromUser.uid;
 
           const marginTop = getMessageMarginTop(msg, prev);
-
           return (
             <MessageBubble
               key={msg.uid}
@@ -50,6 +49,8 @@ const messageGroupComponent = memo(
               isChannel={isChannel}
               {...(passDataAttributes && {
                 "data-message-uid": msg.uid,
+                "data-message-id": msg.id,
+                "data-chat-id": chatId,
                 "data-chat-key": msg.chatKey,
                 "data-is-from-current-user": String(msg.fromUser.uid === currentUserId),
                 "data-is-new": String(msg.isNew),

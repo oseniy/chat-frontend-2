@@ -7,11 +7,9 @@ import { MESSAGE_STATUS } from "@/shared/constants/constants";
 
 import { useChatStore } from "../../../../entities/chat/model/useChatStore";
 import { mapChatMessage } from "../model/mapper";
-import { buildMessageBlocks } from "../model/messageBlock/buildMessageBlocks";
 import { PendingFile } from "../model/store/useChatSendFilesStore";
 import { PendingImage } from "../model/store/useChatSendImagesStore";
-import { MappedChatMessage } from "../model/types/mappedTypes";
-import { ChatType } from "../model/types/serverTypes";
+import { ChatMessageUI, ChatType } from "../model/types/serverTypes";
 
 export const useSendMessage = () => {
   const {
@@ -28,97 +26,143 @@ export const useSendMessage = () => {
   } = useChatStore();
 
   const sendSingleMessage = useCallback(
-    async (text: string, images: PendingImage[], files: PendingFile[]) => {
+    async (
+      text: string,
+      images: PendingImage[] = [],
+      files: PendingFile[] = [],
+      forwardMsgUid?: string,
+    ) => {
       if (!currentUserId || !chatKey) return;
+
+      const forwardTarget = forwardMsgUid
+        ? forwardTargets.find((msg) => msg.uid === forwardMsgUid)
+        : null;
 
       const requestUid = uuidv4();
       const now = Date.now() / 1000;
 
-      const tempMessage: MappedChatMessage = {
-        id: Math.random(),
+      const tempId = Number(`-${Date.now()}${Math.floor(Math.random() * 1000)}`);
+
+      const tempServerMessage: ChatMessageUI = {
+        id: tempId,
         uid: uuidv4(),
-        requestUid,
-        fromUser: {
+
+        from_user: {
           uid: currentUserId,
           username: "",
           nickname: "",
-          firstName: "",
-          lastName: "",
+          first_name: "",
+          last_name: "",
           patronymic: "",
           avatar: "",
-          avatarUrl: "",
-          avatarWebp: "",
-          avatarWebpUrl: "",
+          avatar_url: "",
+          avatar_webp: "",
+          avatar_webp_url: "",
         },
-        toUser: null,
+
+        to_user: null,
+
         content: text || " ",
-        repliedMessages: replyTarget
+
+        replied_messages: replyTarget
           ? [
               {
                 id: replyTarget.id,
                 uid: replyTarget.uid,
-                firstName: replyTarget.fromUser.firstName,
-                lastName: replyTarget.fromUser.lastName,
-                fromUserId: replyTarget.fromUser.uid,
+                from_user: replyTarget.fromUser.uid,
+                first_name: replyTarget.fromUser.firstName,
+                last_name: replyTarget.fromUser.lastName,
                 content: replyTarget.content,
-                filesList: replyTarget.filesList,
+                files_list: replyTarget.filesList.map((f) => ({
+                  id: f.id,
+                  uid: f.uid,
+                  file: typeof f.file === "string" ? f.file : "",
+                  file_url: f.fileUrl,
+                  file_webp: f.fileWebp ?? null,
+                  file_webp_url: f.fileWebpUrl,
+                  file_type: f.fileType,
+                  new: true,
+                  created_at: f.createdAt,
+                  updated_at: f.updatedAt,
+                })),
               },
             ]
           : [],
-        forwardedMessages: forwardTargets.map((msg) => ({
-          id: msg.id,
-          uid: msg.uid,
-          firstName: msg.fromUser.firstName,
-          lastName: msg.fromUser.lastName,
-          fromUserId: msg.fromUser.uid,
-          avatarUrl: "",
-          content: msg.content,
-          filesList: msg.filesList,
-        })),
-        filesList: [
+
+        forwarded_messages:
+          forwardMsgUid && forwardTarget
+            ? [
+                {
+                  id: forwardTarget.id,
+                  uid: forwardMsgUid,
+                  from_user: forwardTarget.fromUser.uid,
+                  first_name: forwardTarget.fromUser.firstName,
+                  avatar_webp_url: forwardTarget.fromUser.avatarWebpUrl || "",
+                  last_name: forwardTarget.fromUser.lastName,
+                  avatar:
+                    forwardTarget.fromUser.avatarUrl || forwardTarget.fromUser.avatarWebpUrl || "",
+                  content: forwardTarget.content,
+                  files_list: forwardTarget.filesList.map((f) => ({
+                    id: f.id,
+                    uid: f.uid,
+                    file: typeof f.file === "string" ? f.file : "",
+                    file_url: f.fileUrl,
+                    file_webp: f.fileWebp ?? null,
+                    file_webp_url: f.fileWebpUrl,
+                    file_type: f.fileType,
+                    new: true,
+                    created_at: f.createdAt,
+                    updated_at: f.updatedAt,
+                  })),
+                },
+              ]
+            : [],
+
+        files_list: [
           ...images.map((img) => ({
             id: img.id,
             uid: `${img.id}-${uuidv4()}`,
             file: img.file,
-            name: img.file.name,
-            type: "image",
-            fileUrl: "/icons/imageLoader.svg",
-            createdAt: now,
-            updatedAt: now,
-            fileType: "image/png",
-            fileWebp: null,
-            fileWebpUrl: "",
+            file_url: "",
+            file_webp: null,
+            file_webp_url: "",
+            file_type: "image/png",
+            new: true,
+            created_at: now,
+            updated_at: now,
           })),
           ...files.map((file) => ({
             id: Number(file.id),
             uid: `${file.id}-${uuidv4()}`,
             file: file.file,
             name: file.file.name,
-            type: file.type,
-            fileUrl: "",
-            createdAt: now,
-            updatedAt: now,
-            fileType: file.type,
-            fileWebp: null,
-            fileWebpUrl: "",
+            file_url: "",
+            file_type: file.type,
+            file_webp: null,
+            new: true,
+            created_at: now,
+            updated_at: now,
           })),
         ],
-        isNew: true,
-        createdAt: now,
-        updatedAt: now,
-        chatId: null,
-        chatKey: chatType === "chat" ? chatKeyUser || chatKey : chatKey,
-        blocks: [],
-        chatType: chatType as ChatType,
-        messageRtc: null,
+
+        new: true,
+        created_at: now,
+        updated_at: now,
+
+        chat_id: "",
+        chat_key: chatType === "chat" ? chatKeyUser || chatKey : chatKey,
+        chat_type: chatType as ChatType,
+
+        message_rtc: null,
+
         status: MESSAGE_STATUS.PENDING,
+        request_uid: requestUid,
       };
 
-      tempMessage.blocks = buildMessageBlocks(tempMessage);
-      addMessage(tempMessage);
+      const tempMessage = mapChatMessage(tempServerMessage);
 
+      addMessage(tempMessage);
       setReplyTarget(null);
-      setForwardTargets([]);
 
       const allFiles = [...images.map((i) => i.file), ...files.map((f) => f.file)];
 
@@ -130,12 +174,12 @@ export const useSendMessage = () => {
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
-
           return { filename: file.name, data: base64 };
         }),
       );
 
       optimisticSendMessage({
+        isFromMe: true,
         chatKey: tempMessage.chatKey,
         message: {
           id: tempMessage.id,
@@ -145,6 +189,7 @@ export const useSendMessage = () => {
             types: images.map((f) => f.type).concat(files.map((f) => f.type)),
             count: tempMessage.filesList.length,
           },
+          hasForwarded: !!forwardMsgUid,
           created_at: now,
           from_user_id: currentUserId,
         },
@@ -157,8 +202,8 @@ export const useSendMessage = () => {
           content: text,
           files: filesPayload,
           status: "publish",
-          replied_messages: replyTarget ? [`${replyTarget.uid}`] : [],
-          forwarded_messages: forwardTargets.map((m) => m.uid),
+          replied_messages: replyTarget?.uid ? [replyTarget.uid] : [],
+          forwarded_messages: forwardMsgUid ? [forwardMsgUid] : [],
           request_uid: requestUid,
         });
 
@@ -168,6 +213,7 @@ export const useSendMessage = () => {
 
         const chatState = useChatStore.getState();
         const tempIndex = chatState.messages.findIndex((m) => m.requestUid === requestUid);
+
         if (tempIndex !== -1) {
           const updated = [...chatState.messages];
           updated[tempIndex] = mapped;
@@ -177,6 +223,7 @@ export const useSendMessage = () => {
         }
 
         optimisticSendMessage({
+          isFromMe: true,
           chatKey: mapped.chatKey,
           message: {
             id: mapped.id,
@@ -186,6 +233,7 @@ export const useSendMessage = () => {
               types: mapped.filesList.map((f) => f.fileType).filter((t): t is string => t !== null),
               count: mapped.filesList.length,
             },
+            hasForwarded: serverMessage.forwarded_messages.length > 0,
             created_at: mapped.createdAt,
             from_user_id: mapped.fromUser.uid,
           },
@@ -204,29 +252,51 @@ export const useSendMessage = () => {
       setFailedStatus,
       replyTarget,
       forwardTargets,
-      setReplyTarget,
-      setForwardTargets,
+      useChatStore,
     ],
   );
 
   return useCallback(
     async (text: string, images: PendingImage[] = [], files: PendingFile[] = []) => {
+      if (forwardTargets.length > 0) {
+        const tasks: Promise<void>[] = [];
+
+        if (text.trim().length > 0) {
+          tasks.push(sendSingleMessage(text, [], []));
+        }
+
+        for (const forwardMsg of forwardTargets) {
+          tasks.push(sendSingleMessage(forwardMsg.content, [], [], forwardMsg.uid));
+        }
+
+        await Promise.all(tasks);
+
+        setForwardTargets([]);
+        return;
+      }
+
       if (images.length) {
         await sendSingleMessage(text, images, []);
         return;
       }
 
       if (files.length) {
-        if (text.trim().length > 0) await sendSingleMessage(text, [], []);
-        for (let i = 0; i < files.length; i++) {
-          await sendSingleMessage("", [], [files[i]]);
+        const tasks: Promise<void>[] = [];
+
+        if (text.trim().length > 0) {
+          tasks.push(sendSingleMessage(text, [], []));
         }
+
+        for (const file of files) {
+          tasks.push(sendSingleMessage("", [], [file]));
+        }
+
+        await Promise.all(tasks);
         return;
       }
 
       await sendSingleMessage(text, [], []);
     },
-
-    [sendSingleMessage],
+    [sendSingleMessage, forwardTargets, setForwardTargets],
   );
 };

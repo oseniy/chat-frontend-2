@@ -17,6 +17,11 @@ export interface MappedChatMessage {
   chatId: string | null;
   chatKey: string;
   chatType: ChatType;
+  isForwarded?: boolean;
+  forwardedAuthors?: string[];
+  avatar: string | null;
+  forwardedChatId?: string | null;
+  forwardedUid?: string | null;
   messageRtc: CallInfo | null;
 
   status?: SendingStatus;

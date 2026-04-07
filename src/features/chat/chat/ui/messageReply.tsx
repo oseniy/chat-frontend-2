@@ -17,7 +17,7 @@ type MessageReplyProps = {
 };
 
 export const MessageReply: React.FC<MessageReplyProps> = ({ className, isMine, message }) => {
-  const { chatKeyUser, chatKey, chatType } = useChatStore();
+  const { chatUid } = useChatStore();
   const firstImage = message.filesList.find((file) =>
     IMAGE_TYPES.some((t) => t.startsWith(file.fileType || "")),
   )?.fileUrl;
@@ -59,7 +59,8 @@ export const MessageReply: React.FC<MessageReplyProps> = ({ className, isMine, m
         )}
         onClick={() => {
           navigateToMessage({
-            userUid: chatType === "chat" ? chatKey || "" : chatKeyUser || "",
+            type: "id_or_uid",
+            userUid: chatUid || "",
             messageUid: message.messageUid,
           });
         }}

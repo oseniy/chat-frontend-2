@@ -76,7 +76,9 @@ export const ReplyBox: React.FC<ReplyBoxProps> = ({ className }) => {
             </span>
           </span>
           {!fileCaption && (
-            <p className="emojis-apple text-gray truncate">{caption.text || replyTarget.content}</p>
+            <p className="emojis-apple text-gray truncate">
+              {caption.text || replyTarget.content || "Персланное сообщение"}
+            </p>
           )}
           {fileCaption && (
             <p className="emojis-apple text-gray truncate">{truncateFileName(fileCaption)}</p>

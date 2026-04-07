@@ -2,19 +2,24 @@
 
 // import Image from "next/imag
 
+import { useEffect } from "react";
+
 import { ChatType } from "@/entities/chat/model/types";
+import { cn } from "@/shared/shadcn/lib/utils";
 import { Button } from "@/shared/shadcn/ui/button";
 import ProfileCall from "@/shared/ui/icons/chat/header/profileCall.svg";
 import ProfileCallInChatDesktop from "@/shared/ui/icons/chat/header/profileCallDesktop.svg";
 import SearchInChat from "@/shared/ui/icons/chat/header/searchWebInChat.svg";
 
 type Props = {
+  className?: string;
   onCallClick: () => void;
   onSearchClick: () => void;
   join?: boolean;
   chatType: ChatType;
   isLoading?: boolean;
   onJoin: () => void;
+  setIsLoading: (value: boolean) => void;
 };
 
 export const ChatHeaderActions = ({
@@ -23,10 +28,15 @@ export const ChatHeaderActions = ({
   join = false,
   chatType,
   isLoading = false,
+  className,
   onJoin,
+  setIsLoading,
 }: Props) => {
+  useEffect(() => {
+    setIsLoading(false);
+  }, [join]);
   return (
-    <div className="flex items-center">
+    <div className={cn("flex shrink-0 items-center", className)}>
       {join ? (
         <div className="flex gap-3">
           <Button
@@ -40,14 +50,6 @@ export const ChatHeaderActions = ({
               ? "Вступить"
               : "Подписаться"}
           </Button>
-          {/* Поиск на десктопе */}
-          <button
-            aria-label="Поиск"
-            onClick={onSearchClick}
-            className="desktop:flex hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full"
-          >
-            <SearchInChat className="text-primary h-11 w-11" />
-          </button>
         </div>
       ) : (
         <>

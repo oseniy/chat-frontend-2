@@ -59,6 +59,7 @@ export const Chat = ({
   useEffect(() => {
     reset();
     resetNavigation();
+    useChatStore.setState((state) => ({ ...state, chatKey: chatKey }));
   }, [chatUid]);
 
   useEffect(() => {
@@ -84,7 +85,17 @@ export const Chat = ({
     const normalized = firstPageMessages.length > 0 ? mapChatMessages(firstPageMessages) : [];
 
     const chatKeyUser = normalized[0]?.chatKey || "";
-    setInitialData(normalized, currentUserId, chatKey, chatType, createdBy, chatKeyUser, chatUid);
+    const chatId = normalized[0]?.chatId || null;
+    setInitialData(
+      normalized,
+      currentUserId,
+      chatKey,
+      chatType,
+      createdBy,
+      chatKeyUser,
+      chatUid,
+      Number(chatId),
+    );
     isInitializedRef.current = true;
 
     if (data.pages.length > 1) {

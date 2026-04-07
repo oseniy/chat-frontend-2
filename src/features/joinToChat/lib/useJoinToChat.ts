@@ -45,7 +45,6 @@ export const useJoinToChat = ({
           await useChatListStore.getState().addNewChat(chatKey);
           router.push(`/chats/${chatKey}`);
           router.refresh();
-          setIsLoading(false);
         } catch {
           setIsLoading(false);
           showToast("Срок действия ссылки истек", {
@@ -55,5 +54,5 @@ export const useJoinToChat = ({
         }
       };
 
-  return { onJoin, isLoading };
+  return { onJoin, isLoading, setIsLoading };
 };

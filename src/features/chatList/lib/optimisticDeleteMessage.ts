@@ -16,6 +16,11 @@ export const optimisticDeleteMessage = (
           ? chat
           : null;
 
+    if (currentChat) {
+      useChatListStore.getState().patchChat(chatKey, {
+        unreadMessages: Math.max(0, currentChat.unreadMessages - 1),
+      });
+    }
     if (currentChat && chat.lastMessage?.uid === lastMessageUid) {
       useChatListStore.getState().patchChat(chatKey, {
         lastMessage: {

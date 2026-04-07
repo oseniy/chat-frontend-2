@@ -37,15 +37,17 @@ export const ChatPreviewModal: React.FC<ChatPreviewModalProps> = ({
   const { onJoin, isLoading } = useJoinToChat({ chatKey, token, closeModal: onClose });
   return (
     <ModalDialog className={cn(className, "px-2 pt-2 pb-6")} open={isOpen} onOpenChange={onClose}>
-      <AlertDialogHeader className="relative flex w-full items-center justify-between gap-2">
+      <AlertDialogHeader className="relative flex w-full min-w-0 items-center justify-between gap-2 overflow-hidden">
         <Close
           className="absolute top-1 right-1 h-3 w-3 cursor-pointer text-black transition duration-200 hover:opacity-80"
           onClick={() => onClose()}
         />
         <div className="mt-4 flex w-full flex-col items-center justify-center gap-3">
           <Avatar avatarUrl={previewData.avatarUrl} size="lg" variant="chat" />
-          <div className="flex w-full flex-col items-center justify-center gap-1 px-8">
-            <AlertDialogTitle className="title text-center">{previewData.name}</AlertDialogTitle>
+          <div className="flex w-full min-w-0 flex-col items-center justify-center gap-1 px-8">
+            <AlertDialogTitle className="title max-w-full truncate text-center">
+              {previewData.name}
+            </AlertDialogTitle>
             <p className="subtext text-gray">
               {chatType === "group"
                 ? `${previewData.participantsCount} ${pluralize(previewData.participantsCount, "участник", "участника", "участников")}`
@@ -61,7 +63,7 @@ export const ChatPreviewModal: React.FC<ChatPreviewModalProps> = ({
               <InfoItem
                 title="Описание"
                 text={previewData.description}
-                className="text-black"
+                className="line-clamp-4 break-all text-black"
               ></InfoItem>
             </div>
           )}

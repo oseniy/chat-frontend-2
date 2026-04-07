@@ -55,8 +55,8 @@ export const DeleteChatModal: React.FC<DeleteChatModalProps> = ({
 
   return (
     <ModalDialog className={cn(className)} open={isOpen} onOpenChange={onClose}>
-      <AlertDialogHeader>
-        <AlertDialogTitle>
+      <AlertDialogHeader className="min-w-0 overflow-hidden">
+        <AlertDialogTitle className="max-w-full truncate">
           <span className="font-medium">Удалить чат</span>
         </AlertDialogTitle>
         <AlertDialogDescription>

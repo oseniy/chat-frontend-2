@@ -23,12 +23,11 @@ type DeleteProfileModalProps = {
 export const DeleteProfileModal: React.FC<DeleteProfileModalProps> = ({
   className,
   isOpen,
-  uid,
   onClose,
 }) => {
   const router = useRouter();
   const onDelete = async () => {
-    const result = await deleteProfile(uid);
+    const result = await deleteProfile();
     if (result.success) {
       logout();
       router.replace("/auth");

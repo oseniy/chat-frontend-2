@@ -63,6 +63,7 @@ export const useChatMessagesInfinite = (chatUid: string | null) => {
         // ordering: "-created_at",
       });
 
+      console.log("result", result);
       if (!result.success) {
         throw new Error("Ошибка получения сообщений");
       }

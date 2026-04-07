@@ -51,8 +51,8 @@ export const DeleteChatGlobalModal: React.FC<DeleteChatGlobalModalProps> = ({
 
   return (
     <ModalDialog className={cn(className)} open={isOpen} onOpenChange={onClose}>
-      <AlertDialogHeader>
-        <AlertDialogTitle>
+      <AlertDialogHeader className="min-w-0 overflow-hidden">
+        <AlertDialogTitle className="max-w-full truncate">
           <span className="font-medium">{content.title}</span>
         </AlertDialogTitle>
         {content.description && (

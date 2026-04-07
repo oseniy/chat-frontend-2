@@ -6,20 +6,8 @@ import { MessageBlock } from "./types";
 
 export const buildMessageBlocks = (msg: MappedChatMessage): MessageBlock[] => {
   const blocks: MessageBlock[] = [];
-  if (msg.forwardedMessages.length > 0) {
-    const f = msg.forwardedMessages;
-    f.map((f) => {
-      blocks.push({
-        type: "forwarded",
-        content: f.content,
-        authorName: `${f.firstName} ${f.lastName}`,
-        avatarUrl: f.avatarUrl,
-        filesList: f.filesList,
-        chatKey: f.fromUserId,
-      });
-    });
-  }
-  if (msg.repliedMessages.length > 0) {
+
+  if (msg.repliedMessages?.length > 0) {
     const r = msg.repliedMessages[0];
     blocks.push({
       type: "reply",
@@ -30,7 +18,7 @@ export const buildMessageBlocks = (msg: MappedChatMessage): MessageBlock[] => {
     });
   }
 
-  if (msg.filesList.length > 0) {
+  if (msg.filesList?.length > 0) {
     if (
       msg.filesList.filter((f) => IMAGE_TYPES.some((t) => t.includes(f.fileType || ""))).length > 0
     ) {

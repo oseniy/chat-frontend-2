@@ -13,6 +13,7 @@ export interface SetChatListSuccess {
   is_favorite: boolean;
   notifications: boolean;
   last_seen_message: number;
+  last_seen_message_uid: string;
 }
 
 export const setChatList = async (data: SetChatListData): Promise<Result<SetChatListSuccess>> => {

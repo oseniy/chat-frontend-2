@@ -15,7 +15,6 @@ export const SpinnerWithX: React.FC<SpinnerWithXProps> = ({ size = 48, color = "
       className="relative flex items-center justify-center"
       style={{ width: size, height: size }}
     >
-      {/* Спиннер */}
       <svg className="animate-spin" width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle
           cx={size / 2}
@@ -30,7 +29,6 @@ export const SpinnerWithX: React.FC<SpinnerWithXProps> = ({ size = 48, color = "
         />
       </svg>
 
-      {/* Крестик */}
       <svg width={size / 2} height={size / 2} viewBox="0 0 24 24" className="absolute">
         <line
           x1="4"
