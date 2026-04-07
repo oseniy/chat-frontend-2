@@ -4,6 +4,7 @@ import {
   handleDeleteMessage,
   handleReadStatus,
 } from "@/features/chat/chat/api/ws/chatHandlers";
+import { handleClearGroupMessages } from "@/features/clearChat/api/handleClearGroupMessages";
 import { handleCreateChat } from "@/features/createChat/api/handleCreateChat";
 import { handleDeleteChat } from "@/features/deleteChatGlobal/api/handleDeleteChat";
 import { handleInviteToChat } from "@/features/inviteToChat/api/handleInviteToChat";
@@ -37,4 +38,6 @@ export const bootstrapWSHandlers = () => {
   registerWSHandler(WS_ACTIONS.DELETE_CHAT, handleDeleteChat);
 
   registerWSHandler(WS_ACTIONS.OWNER_TRANSFERRED, handleOwnerTransferred);
+
+  registerWSHandler(WS_ACTIONS.CLEAR_GROUP_MESSAGES, handleClearGroupMessages);
 };

@@ -21,6 +21,7 @@ export const useAnothersProfileContextMenu = ({
   const menuId = "anothersProfile";
   const { clearChatModalVariant, confirmClear } = useClearChat({
     chatId,
+    chatKey: null,
     chatName,
     chatType: "chat",
   });

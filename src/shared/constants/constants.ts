@@ -26,4 +26,6 @@ export const WS_ACTIONS = {
   UPDATE_MESSAGE: "update_message",
   DELETE_MESSAGE: "delete_message",
   CHANGE_STATUS_READ_MESSAGE: "change_status_read_message",
+
+  CLEAR_GROUP_MESSAGES: "clear_group_messages",
 } as const;
