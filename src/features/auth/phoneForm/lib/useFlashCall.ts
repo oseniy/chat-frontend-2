@@ -6,6 +6,8 @@ import { saveTokenToCookie } from "@/shared/api/actions/saveTokenToCookie";
 import { API_CONFIG } from "@/shared/api/base";
 import { useAuthStore } from "@/shared/api/store";
 
+import { startFlashCall } from "../api/startFlashCall";
+
 export const useFlashCall = () => {
   const [stage, setStage] = useState<"idle" | "calling" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -28,14 +30,9 @@ export const useFlashCall = () => {
       setError(null);
       setCallNumber(null);
       try {
-        const res = await fetch(`${BASE_URL}/api/v1/auth/providers/plusofon/flash-call/start/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone_number: phone }),
-        });
-        if (!res.ok) throw new Error("Ошибка запуска звонка");
-        const { session_uid, session_secret, poll_interval_seconds, call_number } =
-          await res.json();
+        const res = await startFlashCall(phone);
+        if (!res.success) throw new Error(res.error);
+        const { session_uid, session_secret, poll_interval_seconds, call_number } = res.data;
         setCallNumber(call_number);
 
         pollingRef.current = setInterval(

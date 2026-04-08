@@ -52,7 +52,7 @@ export const PhoneForm = ({ className }: { className?: string }) => {
           {callNumber || "Загрузка..."}
         </div>
         {callNumber && (
-          <Button asChild variant="default" size="lg" className="w-full">
+          <Button asChild variant="default" size="lg" className="desktop:hidden w-full">
             <a href={`tel:${callNumber}`}>Позвонить</a>
           </Button>
         )}
