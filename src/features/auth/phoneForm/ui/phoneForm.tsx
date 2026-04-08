@@ -83,16 +83,32 @@ export const PhoneForm = ({ className }: { className?: string }) => {
       <Button type="submit" size="lg" disabled={!isValid || stage !== "idle"}>
         Далее
       </Button>
-      <ModalDialog open={openModal} onOpenChange={setOpenModal}>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{getValues("phone")}</AlertDialogTitle>
+      <ModalDialog open={openModal} onOpenChange={setOpenModal} overlay="card">
+        <AlertDialogHeader className="desktop:mt-0 mt-2">
+          <AlertDialogTitle className="text-tight font-medium text-black">
+            {getValues("phone")}
+          </AlertDialogTitle>
         </AlertDialogHeader>
-        <AlertDialogDescription>Номер указан верно?</AlertDialogDescription>
-        <AlertDialogFooter>
-          <Button variant="outline" onClick={() => setOpenModal(false)}>
+        <AlertDialogDescription className="text-gray subtext-tight desktop:mb-4 font-normal">
+          Номер телефона указан верно?
+        </AlertDialogDescription>
+        <AlertDialogFooter className="desktop:gap-2 flex-row justify-end gap-6">
+          <Button
+            variant="outline"
+            size="sm"
+            className="desktop:flex-0 flex flex-1"
+            onClick={() => setOpenModal(false)}
+          >
             Изменить
           </Button>
-          <Button onClick={() => handleSubmit(onSubmit)()}>Верно</Button>
+          <Button
+            variant="default"
+            size="sm"
+            className="desktop:flex-0 flex flex-1"
+            onClick={() => handleSubmit(onSubmit)()}
+          >
+            Верно
+          </Button>
         </AlertDialogFooter>
       </ModalDialog>
     </form>
