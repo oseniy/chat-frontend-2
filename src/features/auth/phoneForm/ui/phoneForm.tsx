@@ -1,5 +1,6 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation"; // Добавили роутер для кнопки подтверждения
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
@@ -22,7 +23,8 @@ export const PhoneForm = ({ className }: { className?: string }) => {
   const setPhone = usePhoneStore((state) => state.setPhone);
   const { start, stage, error, callNumber } = useFlashCall();
   const [openModal, setOpenModal] = useState(false);
-  const [, setPendingPhone] = useState("");
+  const [pendingPhone, setPendingPhone] = useState(""); // Исправили деструктуризацию
+  const router = useRouter();
 
   const {
     handleSubmit,
@@ -47,14 +49,48 @@ export const PhoneForm = ({ className }: { className?: string }) => {
       <div className={cn("flex flex-col items-center gap-6 py-10 text-center", className)}>
         <div className="border-primary mb-2 h-10 w-10 animate-spin rounded-full border-4 border-t-transparent" />
         <h3 className="text-lg font-semibold text-black">Авторизация по звонку</h3>
-        <p className="text-sm text-gray-500">Позвоните на номер:</p>
-        <div className="rounded-2xl bg-gray-100 px-6 py-4 font-mono text-2xl font-bold text-black">
+
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-gray-500">
+            Для подтверждения номера{" "}
+            <span className="font-semibold text-black">{pendingPhone}</span>
+          </p>
+          <p className="text-sm font-medium text-gray-500">Позвоните на номер:</p>
+        </div>
+
+        <div className="rounded-2xl bg-gray-100 px-6 py-4 font-mono text-2xl font-bold tracking-widest text-black">
           {callNumber || "Загрузка..."}
         </div>
+
+        {/* Кнопка Позвонить - только для мобилок */}
         {callNumber && (
           <Button asChild variant="default" size="lg" className="desktop:hidden w-full">
             <a href={`tel:${callNumber}`}>Позвонить</a>
           </Button>
+        )}
+
+        {/* Кнопка для десктопа - "Я позвонил" (принудительно дергает роутер) */}
+        <div className="flex w-full flex-col gap-3">
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full"
+            onClick={() => {
+              router.refresh(); // Обновляем куки на сервере
+            }}
+          >
+            Я уже позвонил
+          </Button>
+          <p className="text-[10px] text-gray-400">
+            Нажмите «Я уже позвонил», если переход в чат не произошел автоматически после завершения
+            вызова.
+          </p>
+        </div>
+
+        {stage === "success" && (
+          <p className="animate-pulse font-medium text-green-600">
+            Вход выполнен, перенаправляем...
+          </p>
         )}
       </div>
     );
