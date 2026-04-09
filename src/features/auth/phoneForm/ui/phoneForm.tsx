@@ -1,7 +1,8 @@
 "use client";
+
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation"; // Добавили роутер для кнопки подтверждения
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { ModalDialog } from "@/shared/modalDialog/ui/modalDialog";
@@ -23,7 +24,7 @@ export const PhoneForm = ({ className }: { className?: string }) => {
   const setPhone = usePhoneStore((state) => state.setPhone);
   const { start, stage, error, callNumber } = useFlashCall();
   const [openModal, setOpenModal] = useState(false);
-  const [pendingPhone, setPendingPhone] = useState(""); // Исправили деструктуризацию
+  const [pendingPhone, setPendingPhone] = useState(""); // Исправлено: добавили переменную
   const router = useRouter();
 
   const {
@@ -37,60 +38,70 @@ export const PhoneForm = ({ className }: { className?: string }) => {
     defaultValues: { phone: "" },
   });
 
-  const onSubmit = async (data: PhoneData) => {
-    setOpenModal(false);
-    setPhone(data.phone);
-    setPendingPhone(data.phone);
-    await start(data.phone.replaceAll(" ", ""));
-  };
+  const onSubmit = useCallback(
+    async (data: PhoneData) => {
+      setOpenModal(false);
+      setPhone(data.phone);
+      setPendingPhone(data.phone);
+      await start(data.phone.replaceAll(" ", ""));
+    },
+    [setPhone, start],
+  );
+
+  // СЛУШАЕМ ENTER ДЛЯ МОДАЛКИ (Правка тестера)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (openModal && e.key === "Enter") {
+        e.preventDefault();
+        handleSubmit(onSubmit)();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [openModal, handleSubmit, onSubmit]);
 
   if (stage === "calling" || stage === "success") {
     return (
       <div className={cn("flex flex-col items-center gap-6 py-10 text-center", className)}>
-        <div className="border-primary mb-2 h-10 w-10 animate-spin rounded-full border-4 border-t-transparent" />
-        <h3 className="text-lg font-semibold text-black">Авторизация по звонку</h3>
+        <div className="flex flex-col items-center gap-2">
+          <div className="border-primary mb-2 h-10 w-10 animate-spin rounded-full border-4 border-t-transparent" />
+          <h3 className="text-lg font-semibold text-black">Авторизация по звонку</h3>
+        </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex w-full flex-col gap-4">
           <p className="text-sm text-gray-500">
             Для подтверждения номера{" "}
-            <span className="font-semibold text-black">{pendingPhone}</span>
+            <span className="font-semibold text-black">{pendingPhone}</span> <br />
+            позвоните на номер ниже:
           </p>
-          <p className="text-sm font-medium text-gray-500">Позвоните на номер:</p>
-        </div>
 
-        <div className="rounded-2xl bg-gray-100 px-6 py-4 font-mono text-2xl font-bold tracking-widest text-black">
-          {callNumber || "Загрузка..."}
-        </div>
+          <div className="rounded-2xl border-2 border-gray-100 bg-white px-6 py-5 font-mono text-2xl font-bold tracking-widest text-black shadow-sm ring-1 ring-black/5">
+            {callNumber || "Загрузка..."}
+          </div>
 
-        {/* Кнопка Позвонить - только для мобилок */}
-        {callNumber && (
-          <Button asChild variant="default" size="lg" className="desktop:hidden w-full">
-            <a href={`tel:${callNumber}`}>Позвонить</a>
-          </Button>
-        )}
+          {callNumber && (
+            <Button asChild variant="default" size="lg" className="desktop:hidden mt-2 w-full">
+              <a href={`tel:${callNumber}`}>Позвонить</a>
+            </Button>
+          )}
 
-        {/* Кнопка для десктопа - "Я позвонил" (принудительно дергает роутер) */}
-        <div className="flex w-full flex-col gap-3">
-          <Button
-            variant="outline"
-            size="lg"
-            className="w-full"
-            onClick={() => {
-              router.refresh(); // Обновляем куки на сервере
-            }}
-          >
-            Я уже позвонил
-          </Button>
-          <p className="text-[10px] text-gray-400">
-            Нажмите «Я уже позвонил», если переход в чат не произошел автоматически после завершения
-            вызова.
-          </p>
+          <div className="mt-2 flex flex-col gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-gray-600"
+              onClick={() => router.refresh()}
+            >
+              Я уже позвонил
+            </Button>
+            <p className="text-[10px] leading-tight text-gray-400">
+              Нажмите кнопку выше, если после звонка <br /> переход не произошел автоматически.
+            </p>
+          </div>
         </div>
 
         {stage === "success" && (
-          <p className="animate-pulse font-medium text-green-600">
-            Вход выполнен, перенаправляем...
-          </p>
+          <p className="animate-pulse font-medium text-green-600">Вход выполнен!</p>
         )}
       </div>
     );
@@ -111,6 +122,7 @@ export const PhoneForm = ({ className }: { className?: string }) => {
           <PhoneInput
             {...field}
             id="phone"
+            autoFocus
             error={error ?? undefined}
             disabled={stage !== "idle"}
           />
