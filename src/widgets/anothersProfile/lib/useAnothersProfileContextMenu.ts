@@ -45,7 +45,7 @@ export const useAnothersProfileContextMenu = ({
                 openModal("clearChat", {
                   chatName,
                   modalVariant: clearChatModalVariant,
-                  onConfirm: confirmClear,
+                  onConfirm: () => confirmClear(chatId),
                 });
               },
             },
@@ -64,6 +64,6 @@ export const useAnothersProfileContextMenu = ({
       },
       isOpen: activeMenuId === menuId,
     }),
-    [openMenu, activeMenuId, chatName, clearChatModalVariant, confirmClear, openModal],
+    [openMenu, activeMenuId, chatName, clearChatModalVariant, confirmClear, openModal, chatId],
   );
 };

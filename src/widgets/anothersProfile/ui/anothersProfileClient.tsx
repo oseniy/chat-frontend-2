@@ -7,6 +7,7 @@ import { ChatTypeLight } from "@/entities/chat/model/types";
 import { ContactListResponse } from "@/entities/contact/model/types";
 import { User } from "@/entities/user/model/types";
 import { useUserInfoStore } from "@/entities/user/model/useUserInfoStore";
+import { useChatListStore } from "@/features/chatList/model/useChatListStore";
 import { useIsMobileStore } from "@/shared/model/isMobile.store";
 import { SidebarHeader } from "@/shared/ui/sidebarHeader/sidebarHeader";
 
@@ -59,8 +60,16 @@ export const AnothersProfileClient: React.FC<AnothersProfileClientProps> = ({
 
   const displayData = cachedUserInfo ?? chatInfo;
 
+  // Извлекаем ID чата: сначала из данных пользователя, если нет — из chatKeyProp
+  const chatId = displayData?.id || (chatKeyProp ? parseInt(chatKeyProp, 10) : null);
+
+  console.log("--- ОТЛАДКА ОЧИСТКИ ---");
+  console.log("chatKeyProp:", chatKeyProp);
+  console.log("displayData ID:", displayData?.id);
+  console.log("Данные из стора:", useChatListStore.getState().chatsByKey[chatKeyProp || ""]);
+
   const contextMenu = useAnothersProfileContextMenu({
-    chatId: displayData?.id || null,
+    chatId: chatId && !isNaN(chatId as number) ? (chatId as number) : null,
     chatName: displayData?.fullName ?? "",
   });
 

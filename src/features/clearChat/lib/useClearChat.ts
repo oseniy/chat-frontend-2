@@ -38,44 +38,59 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
       ? "История канала удалена"
       : "История чата удалена";
 
-  const confirmClear = useCallback(async () => {
-    setIsLoading(true);
+  const confirmClear = useCallback(
+    async (explicitId?: unknown) => {
+      // Если передали ID напрямую (из меню) — берем его, иначе из пропсов хука
+      const targetId = typeof explicitId === "number" ? explicitId : chatId;
 
-    // Получаем chatKey из store для optimistic update
-    const { chatsByKey } = useChatListStore.getState();
-    const chatKey = Object.keys(chatsByKey).find((key) => chatsByKey[key].id === chatId);
-
-    try {
-      // 1. API запрос на очистку
-      await clearChat({ index: chatId });
-
-      // 2. Optimistic update - мгновенное обновление UI
-      if (chatKey) {
-        useChatListStore.getState().patchChat(chatKey, {
-          lastMessage: null,
-          unreadMessages: 0,
-          unreadFiles: 0,
-        });
+      if (targetId === null || targetId === undefined) {
+        console.error("ClearChat Error: chatId is null");
+        return;
       }
 
-      // 3. Очищаем сообщения в открытом окне чата
-      clearMessages();
+      setIsLoading(true);
 
-      // 4. Invalidate для фоновой перезагрузки (гарантия актуальности)
-      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      try {
+        // 1. API запрос на очистку
+        const result = await clearChat({ index: targetId });
 
-      // 5. Закрываем модалку и показываем успех
-      closeModal();
-      showToast(toastMessage, {
-        mobile: "/icons/toast/checkMobile.svg",
-        desktop: "/icons/toast/checkDesktop.svg",
-      });
-    } catch (error) {
-      console.error("Ошибка при очистке чата:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [closeModal, showToast, toastMessage, clearMessages, chatId, queryClient]);
+        if (result.success) {
+          // 2. Optimistic update
+          const { chatsByKey } = useChatListStore.getState();
+          const chatKey = Object.keys(chatsByKey).find((key) => chatsByKey[key].id === targetId);
+
+          if (chatKey) {
+            useChatListStore.getState().patchChat(chatKey, {
+              lastMessage: null,
+              unreadMessages: 0,
+              unreadFiles: 0,
+            });
+          }
+
+          // 3. Очищаем сообщения
+          clearMessages();
+
+          // 4. Инвалидация кеша
+          await queryClient.invalidateQueries({ queryKey: ["chats"] });
+          await queryClient.invalidateQueries({ queryKey: ["messages", targetId] });
+
+          // 5. Закрываем модалку и успех
+          closeModal();
+          showToast(toastMessage, {
+            mobile: "/icons/toast/checkMobile.svg",
+            desktop: "/icons/toast/checkDesktop.svg",
+          });
+        } else {
+          console.error("Server returned error:", result.error);
+        }
+      } catch (error) {
+        console.error("Network or Logic error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [closeModal, showToast, toastMessage, clearMessages, chatId, queryClient],
+  );
 
   return {
     isLoading,
