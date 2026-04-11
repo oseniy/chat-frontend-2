@@ -43,7 +43,7 @@ export const DeleteMessageModal: React.FC<DeleteMessageModalProps> = ({
     exitSelectionMode,
   } = useChatStore.getState();
 
-  const [isChecked, setIsChecked] = useState(false);
+  const [isChecked, setIsChecked] = useState(true);
 
   const messageIds = isSelectionMode
     ? Array.from(selectedMessageUids)

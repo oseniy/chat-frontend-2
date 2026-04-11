@@ -47,11 +47,11 @@ export const mapUserDto = (dto: UserDto): User => {
   return {
     ...base,
     avatar: dto.avatar || "",
+    avatarUrl: dto.avatar_url || "",
     avatarWebp: dto.avatar_webp || "",
     bio: dto.additional_information || "",
     birthday: dto.birthday ?? null,
     email: dto.email || "",
-    // Значение по умолчанию для gender, если бэкенд его не прислал
     gender: dto.gender ?? "male",
     genderLabel: dto.gender_label || "",
     country: dto.country || "",

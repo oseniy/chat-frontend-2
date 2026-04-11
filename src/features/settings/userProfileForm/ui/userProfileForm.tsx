@@ -66,12 +66,15 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
   });
 
   const { register, handleSubmit, control, formState } = form;
-  const { isValid, isDirty, isSubmitting } = formState;
+  const { errors, isValid, isDirty, isSubmitting } = formState;
 
   const handleSubmitForm = async (data: FormData) => {
     const submitData = prepareSubmitData(data, profile, birthday);
     await onSubmit(submitData);
   };
+
+  console.log("All form errors:", errors);
+  console.log("Birthday object errors:", errors.birthday);
 
   return (
     <div className={cn("", className)}>
@@ -88,13 +91,37 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
           <FormInput
             id="name"
             label="Изменить имя"
-            {...register("name")}
+            error={errors.name?.message}
+            {...register("name", {
+              onChange: (e) => {
+                let value = e.target.value;
+
+                value = value
+                  .replace(/\s*-\s*/g, "-")
+                  .replace(/\s{2,}/g, " ")
+                  .replace(/^\s+/, "");
+
+                e.target.value = value;
+              },
+            })}
             inputClassName="desktop:border-0 font-normal"
           />
           <FormInput
             id="lastName"
             label="Изменить фамилию"
-            {...register("lastName")}
+            error={errors.lastName?.message}
+            {...register("lastName", {
+              onChange: (e) => {
+                let value = e.target.value;
+
+                value = value
+                  .replace(/\s*-\s*/g, "-")
+                  .replace(/\s{2,}/g, " ")
+                  .replace(/^\s+/, "");
+
+                e.target.value = value;
+              },
+            })}
             inputClassName="desktop:border-0 font-normal"
           />
 
@@ -105,6 +132,7 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
           <FormInput
             id="description"
             label="Изменить описание"
+            error={errors.description?.message}
             inputClassName="desktop:border-0 font-normal"
             {...register("description")}
           />
