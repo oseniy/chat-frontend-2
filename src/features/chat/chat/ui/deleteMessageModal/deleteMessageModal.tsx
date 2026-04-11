@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/shadcn/ui/alert-dialog";
 import { Button } from "@/shared/shadcn/ui/button";
-import { Checkbox } from "@/shared/ui/checkBox";
+import { Checkbox } from "@/shared/ui/checkbox";
 
 import { deleteMessagesBulkUseCase } from "./lib/deleteMessagesBulk.useCase";
 

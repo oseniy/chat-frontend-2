@@ -16,7 +16,7 @@ export const changeProfileSchema = z.object({
       message: "Имя не должно начинаться или заканчиваться с тире",
     })
     .refine((val) => !/--/.test(val), {
-      message: "Нельзя использовать два тире подряд",
+      message: "Нельзя использовать два дефиса подряд",
     }),
   lastName: z
     .string()
@@ -35,7 +35,7 @@ export const changeProfileSchema = z.object({
       message: "Фамилия не должна начинаться или заканчиваться с тире",
     })
     .refine((val) => val === "" || !/--/.test(val), {
-      message: "Нельзя использовать два тире подряд",
+      message: "Нельзя использовать два дефиса подряд",
     })
     .or(z.literal("")),
   phone: z.string().min(2, "Не менее 2 символов").max(30, "Не более 30 символов").optional(),
