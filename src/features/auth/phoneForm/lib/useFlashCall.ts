@@ -3,8 +3,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { saveFlashCallAuthAction } from "@/features/auth/phoneForm/lib/actions/saveFlashCallAuth";
-import { saveIsFilledToCookie } from "@/shared/api/actions/saveIsFilledToCookie";
-import { saveTokenToCookie } from "@/shared/api/actions/saveTokenToCookie";
 import { getApiClient } from "@/shared/api/getApiClient";
 import { useAuthStore } from "@/shared/api/store";
 
@@ -70,9 +68,11 @@ export const useFlashCall = () => {
 
                 const tokens = claimRes.data;
 
-                await saveFlashCallAuthAction(tokens.refresh);
-                await saveTokenToCookie(tokens.access);
-                await saveIsFilledToCookie(tokens.is_filled ?? false);
+                await saveFlashCallAuthAction({
+                  refresh: tokens.refresh,
+                  access: tokens.access,
+                  isFilled: tokens.is_filled ?? false,
+                });
 
                 setAccessToken(tokens.access);
                 setStage("success");
