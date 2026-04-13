@@ -24,7 +24,6 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Определение варианта модалки
   const clearChatModalVariant =
     chatType === "public-channel" || chatType === "private-channel"
       ? ("channel" as const)
@@ -32,65 +31,64 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
         ? ("group" as const)
         : ("chat" as const);
 
-  // Определение текста Toast
   const toastMessage =
     chatType === "public-channel" || chatType === "private-channel"
       ? "История канала удалена"
       : "История чата удалена";
 
-  const confirmClear = useCallback(
-    async (explicitId?: unknown) => {
-      // Если передали ID напрямую (из меню) — берем его, иначе из пропсов хука
-      const targetId = typeof explicitId === "number" ? explicitId : chatId;
+  const confirmClear = useCallback(async () => {
+    // Получаем состояние сторов напрямую в момент клика, чтобы избежать проблем с замыканиями
+    const chatState = useChatStore.getState() as unknown as Record<string, unknown>;
+    const activeId = chatState.activeChatId || chatState.chatId || chatState.id;
 
-      if (targetId === null || targetId === undefined) {
-        console.error("ClearChat Error: chatId is null");
-        return;
-      }
+    const targetId = (chatId || activeId) as number | null;
 
-      setIsLoading(true);
+    if (!targetId) {
+      console.error("Не удалось найти ID чата для очистки");
+      return;
+    }
 
-      try {
-        // 1. API запрос на очистку
-        const result = await clearChat({ index: targetId });
+    setIsLoading(true);
 
-        if (result.success) {
-          // 2. Optimistic update
-          const { chatsByKey } = useChatListStore.getState();
-          const chatKey = Object.keys(chatsByKey).find((key) => chatsByKey[key].id === targetId);
+    try {
+      const result = await clearChat({ index: targetId });
 
-          if (chatKey) {
-            useChatListStore.getState().patchChat(chatKey, {
-              lastMessage: null,
-              unreadMessages: 0,
-              unreadFiles: 0,
-            });
-          }
+      if (result.success) {
+        const { chatsByKey, patchChat } = useChatListStore.getState();
 
-          // 3. Очищаем сообщения
-          clearMessages();
+        // Находим ключ чата для обновления в списке слева
+        const chatKey = Object.keys(chatsByKey).find(
+          (key) => (chatsByKey[key] as unknown as Record<string, unknown>).id === targetId,
+        );
 
-          // 4. Инвалидация кеша
-          await queryClient.invalidateQueries({ queryKey: ["chats"] });
-          await queryClient.invalidateQueries({ queryKey: ["messages", targetId] });
-
-          // 5. Закрываем модалку и успех
-          closeModal();
-          showToast(toastMessage, {
-            mobile: "/icons/toast/checkMobile.svg",
-            desktop: "/icons/toast/checkDesktop.svg",
+        if (chatKey && patchChat) {
+          patchChat(chatKey, {
+            lastMessage: null,
+            unreadMessages: 0,
+            unreadFiles: 0,
           });
-        } else {
-          console.error("Server returned error:", result.error);
         }
-      } catch (error) {
-        console.error("Network or Logic error:", error);
-      } finally {
-        setIsLoading(false);
+
+        // Очищаем текущее окно сообщений
+        clearMessages();
+
+        // Обновляем данные в React Query
+        await queryClient.invalidateQueries({ queryKey: ["chats"] });
+        await queryClient.invalidateQueries({ queryKey: ["messages", targetId] });
+
+        closeModal();
+        showToast(toastMessage, {
+          mobile: "/icons/toast/checkMobile.svg",
+          desktop: "/icons/toast/checkDesktop.svg",
+        });
       }
-    },
-    [closeModal, showToast, toastMessage, clearMessages, chatId, queryClient],
-  );
+    } catch (error) {
+      console.error("Ошибка при очистке чата:", error);
+    } finally {
+      setIsLoading(false);
+    }
+    // Включаем зависимости, которые реально используются, чтобы линтер был доволен и логика работала
+  }, [chatId, clearMessages, closeModal, queryClient, showToast, toastMessage]);
 
   return {
     isLoading,

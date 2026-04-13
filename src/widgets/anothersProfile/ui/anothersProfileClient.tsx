@@ -56,20 +56,27 @@ export const AnothersProfileClient: React.FC<AnothersProfileClientProps> = ({
     }
     setActiveTab("media");
     return () => resetTabsUI();
-  }, [chatInfo]);
+  }, [chatInfo, setActiveTab, resetTabsUI]);
 
   const displayData = cachedUserInfo ?? chatInfo;
 
-  // Извлекаем ID чата: сначала из данных пользователя, если нет — из chatKeyProp
-  const chatId = displayData?.id || (chatKeyProp ? parseInt(chatKeyProp, 10) : null);
+  const finalChatId = useChatListStore((s) => {
+    if (!chatKeyProp) return null;
+    const cleanUid = chatKeyProp.replace("user_", "");
 
-  console.log("--- ОТЛАДКА ОЧИСТКИ ---");
-  console.log("chatKeyProp:", chatKeyProp);
-  console.log("displayData ID:", displayData?.id);
-  console.log("Данные из стора:", useChatListStore.getState().chatsByKey[chatKeyProp || ""]);
+    const chatEntry = Object.values(s.chatsByKey).find((c) => {
+      const data = c as unknown as Record<string, unknown>;
+      const innerChat = data.chat as Record<string, unknown> | undefined;
+      return (
+        data.chat_key === cleanUid || data.chat_key === chatKeyProp || innerChat?.uid === cleanUid
+      );
+    }) as unknown as Record<string, unknown>;
+
+    return (chatEntry?.id || chatEntry?.index) as number | null;
+  });
 
   const contextMenu = useAnothersProfileContextMenu({
-    chatId: chatId && !isNaN(chatId as number) ? (chatId as number) : null,
+    chatId: typeof finalChatId === "number" ? finalChatId : null,
     chatName: displayData?.fullName ?? "",
   });
 
