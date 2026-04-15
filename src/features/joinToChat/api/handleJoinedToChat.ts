@@ -1,8 +1,5 @@
-import { InfiniteData } from "@tanstack/react-query";
-
-import { ChatParticipantListResponse } from "@/entities/chat/model/types";
+import { addParticipantsToCache } from "@/entities/chat/lib/participantsCache";
 import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
-import { useParticipantsStore } from "@/entities/chat/model/useParticipantsStore";
 import { useUserStore } from "@/entities/user/model/userStore";
 import { getQueryClient } from "@/shared/api/getQueryClient";
 import { WSHandler } from "@/shared/api/ws/model/types";
@@ -64,27 +61,6 @@ export const handleJoinedToChat: WSHandler = (data) => {
     isInContacts: false,
   };
 
-  useParticipantsStore.getState().addParticipants([newParticipant]);
-
-  const queryClient = getQueryClient();
-  queryClient.setQueryData(
-    ["participants", chatKey],
-    (oldData: InfiniteData<ChatParticipantListResponse> | undefined) => {
-      if (!oldData) return oldData;
-      const [firstPage, ...restPages] = oldData.pages;
-
-      return {
-        ...oldData,
-        pages: [
-          {
-            ...firstPage,
-            count: (firstPage?.count ?? 0) + 1,
-            results: [...(firstPage?.results ?? []), newParticipant],
-          },
-          ...restPages,
-        ],
-      };
-    },
-  );
-  queryClient.invalidateQueries({ queryKey: ["participants", chatKey] });
+  addParticipantsToCache(chatKey, [newParticipant]);
+  getQueryClient().invalidateQueries({ queryKey: ["participants", chatKey] });
 };

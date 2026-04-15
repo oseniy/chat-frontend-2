@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 
-import { useParticipantsSync } from "@/entities/chat/lib/useParticipantsSync";
+import { useParticipants } from "@/entities/chat/lib/useParticipants";
 import { ChatParticipantListResponse } from "@/entities/chat/model/types";
-import { useParticipantsStore } from "@/entities/chat/model/useParticipantsStore";
 import { ToInvitePageBtn } from "@/features/inviteToChat/ui/toInvitePageBtn";
 import { useInfiniteScroll } from "@/shared/lib/useInfiniteScroll";
 import { Searchbar } from "@/shared/ui/searchbar";
@@ -28,12 +27,10 @@ export const ParticipantsPage: React.FC<ParticipantsPageProps> = ({
   isOwner,
 }) => {
   const [search, setSearch] = useState("");
-  const { fetchNextPage, hasNextPage, isFetchingNextPage } = useParticipantsSync(
+  const { participants, fetchNextPage, hasNextPage, isFetchingNextPage } = useParticipants(
     chatKey,
     initialParticipants,
   );
-
-  const participants = useParticipantsStore((s) => s.participants);
 
   const loadMoreRef = useInfiniteScroll({
     hasNextPage,

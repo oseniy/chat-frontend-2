@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useShallow } from "zustand/shallow";
 
 import { addMembersToChat } from "@/entities/chat/api/addMemberToChat";
-import { useParticipantsStore } from "@/entities/chat/model/useParticipantsStore";
+import { useParticipants } from "@/entities/chat/lib/useParticipants";
 import { useContactsSync } from "@/entities/contact/lib/useContactsSync";
 import { useContactStore } from "@/entities/contact/model/store";
 import { useSelectContactsStore } from "@/features/contacts/model/SelectContactsStore";
@@ -26,7 +26,7 @@ export const InvitePage: React.FC<InvitePageProps> = ({ chatKey }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = useContactsSync();
   const { contacts, isInitialized } = useContactStore();
-  const participants = useParticipantsStore((s) => s.participants);
+  const { participants } = useParticipants(chatKey);
   const selectedContacts = useSelectContactsStore(useShallow((s) => s.selected));
   const setActiveSection = useAnothersProfileUIStore((s) => s.setActiveSection);
 
@@ -74,8 +74,8 @@ export const InvitePage: React.FC<InvitePageProps> = ({ chatKey }) => {
         {logic.showLocalContacts && (
           <div className="flex flex-col gap-2">
             <ListSeparator text="Мои контакты" />
-            {logic.filteredLocalContacts.map((c, index) => {
-              return <ContactCardFeature contact={c} key={index} />;
+            {logic.filteredLocalContacts.map((c) => {
+              return <ContactCardFeature contact={c} key={c.systemUid} />;
             })}
           </div>
         )}

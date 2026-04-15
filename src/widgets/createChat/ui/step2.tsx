@@ -39,8 +39,8 @@ export const Step2Widget: React.FC<Step2WidgetProps> = () => {
         {logic.showLocalContacts && (
           <div className="flex flex-col gap-2">
             <ListSeparator text="Мои контакты" />
-            {logic.filteredLocalContacts.map((c, index) => {
-              return <ContactCardFeature contact={c} key={index} />;
+            {logic.filteredLocalContacts.map((c) => {
+              return <ContactCardFeature contact={c} key={c.systemUid} />;
             })}
           </div>
         )}

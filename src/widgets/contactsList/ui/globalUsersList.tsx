@@ -12,8 +12,8 @@ export const GlobalUsersList: React.FC<GlobalUsersListProps> = ({ className, glo
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <ListSeparator text="Пользователи А-чата" />
-      {globalUsers.map((c, index) => {
-        return <ContactCardFeature contact={c} key={index} />;
+      {globalUsers.map((c) => {
+        return <ContactCardFeature contact={c} key={c.systemUid} />;
       })}
     </div>
   );

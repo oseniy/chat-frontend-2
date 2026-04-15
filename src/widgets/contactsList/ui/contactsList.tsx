@@ -13,8 +13,8 @@ export const ContactsList: React.FC<ContactsListProps> = ({ className, contacts 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <ListSeparator text="Мои контакты" after={<DeleteContactsToggler />} />
-      {contacts.map((c, index) => {
-        return <ContactCardFeature contact={c} key={index} />;
+      {contacts.map((c) => {
+        return <ContactCardFeature contact={c} key={c.systemUid} />;
       })}
     </div>
   );

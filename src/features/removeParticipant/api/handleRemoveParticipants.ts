@@ -1,11 +1,8 @@
-import { InfiniteData } from "@tanstack/react-query";
-
-import { ChatObject, ChatParticipantListResponse } from "@/entities/chat/model/types";
+import { removeParticipantsFromCache } from "@/entities/chat/lib/participantsCache";
+import { ChatObject } from "@/entities/chat/model/types";
 import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
-import { useParticipantsStore } from "@/entities/chat/model/useParticipantsStore";
 import { useUserStore } from "@/entities/user/model/userStore";
 import { useChatListStore } from "@/features/chatList/model/useChatListStore";
-import { getQueryClient } from "@/shared/api/getQueryClient";
 import { WSHandler } from "@/shared/api/ws/model/types";
 
 export const handleRemoveParticipants: WSHandler = (data) => {
@@ -34,7 +31,7 @@ export const handleRemoveParticipants: WSHandler = (data) => {
     return;
   }
 
-  useParticipantsStore.getState().removeParticipants(removedUids);
+  removeParticipantsFromCache(chatKey, removedUids);
 
   const store = useChatInfoStore.getState();
   const existing = store.chatInfoByKey[chatKey];
@@ -44,20 +41,4 @@ export const handleRemoveParticipants: WSHandler = (data) => {
     membersCount: existing.membersCount - removedUsers.length,
     members: existing.members.filter((m) => !removedUids.includes(m.uid)),
   });
-
-  const queryClient = getQueryClient();
-  queryClient.setQueryData(
-    ["participants", chatKey],
-    (oldData: InfiniteData<ChatParticipantListResponse> | undefined) => {
-      if (!oldData) return oldData;
-      return {
-        ...oldData,
-        pages: oldData.pages.map((page, i) => ({
-          ...page,
-          count: i === 0 ? Math.max(0, page.count - removedUsers.length) : page.count,
-          results: page.results.filter((p) => !removedUids.includes(p.uid)),
-        })),
-      };
-    },
-  );
 };
