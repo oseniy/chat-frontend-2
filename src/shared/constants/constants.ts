@@ -28,4 +28,6 @@ export const WS_ACTIONS = {
   CHANGE_STATUS_READ_MESSAGE: "change_status_read_message",
 
   CLEAR_GROUP_MESSAGES: "clear_group_messages",
+
+  NEW_STATUS_USER: "new_status_user",
 } as const;
