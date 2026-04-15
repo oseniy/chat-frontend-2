@@ -1,6 +1,6 @@
 import { Contact } from "@/entities/contact/model/types";
 import { DeleteContactsToggler } from "@/features/contacts/deleteContacts/ui/deleteContactsToggler";
-import { ContactCardFeature } from "@/features/contacts/ui/ContactCardFeature";
+import { ContactCardDeleteFeature } from "@/features/contacts/ui/ContactCardDeleteFeature";
 import { cn } from "@/shared/shadcn/lib/utils";
 import { ListSeparator } from "@/shared/ui/listSeparator";
 
@@ -14,7 +14,7 @@ export const ContactsList: React.FC<ContactsListProps> = ({ className, contacts 
     <div className={cn("flex flex-col gap-2", className)}>
       <ListSeparator text="Мои контакты" after={<DeleteContactsToggler />} />
       {contacts.map((c) => {
-        return <ContactCardFeature contact={c} key={c.systemUid} />;
+        return <ContactCardDeleteFeature contact={c} key={c.systemUid} />;
       })}
     </div>
   );

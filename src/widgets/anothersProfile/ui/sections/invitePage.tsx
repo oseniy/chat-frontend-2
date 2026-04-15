@@ -5,7 +5,7 @@ import { addMembersToChat } from "@/entities/chat/api/addMemberToChat";
 import { useParticipants } from "@/entities/chat/lib/useParticipants";
 import { useContactsSync } from "@/entities/contact/lib/useContactsSync";
 import { useContactStore } from "@/entities/contact/model/store";
-import { useSelectContactsStore } from "@/features/contacts/model/SelectContactsStore";
+import { Contact } from "@/entities/contact/model/types";
 import { ContactCardFeature } from "@/features/contacts/ui/ContactCardFeature";
 import { InviteToChatBtn } from "@/features/inviteToChat/ui/inviteToChatBtn";
 import { useInfiniteScroll } from "@/shared/lib/useInfiniteScroll";
@@ -16,6 +16,7 @@ import { Searchbar } from "@/shared/ui/searchbar";
 
 import { useInvitePageLogic } from "../../lib/useInvitePageLogic";
 import { useAnothersProfileUIStore } from "../../model/anothersProfileUIStore";
+import { useInviteSelectionStore } from "../../model/inviteSelectionStore";
 
 type InvitePageProps = {
   chatKey: string;
@@ -27,7 +28,13 @@ export const InvitePage: React.FC<InvitePageProps> = ({ chatKey }) => {
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = useContactsSync();
   const { contacts, isInitialized } = useContactStore();
   const { participants } = useParticipants(chatKey);
-  const selectedContacts = useSelectContactsStore(useShallow((s) => s.selected));
+  const { selectedContacts, toggle, clear } = useInviteSelectionStore(
+    useShallow((s) => ({
+      selectedContacts: s.selected,
+      toggle: s.toggle,
+      clear: s.clear,
+    })),
+  );
   const setActiveSection = useAnothersProfileUIStore((s) => s.setActiveSection);
 
   const participantUids = useMemo(() => new Set(participants.map((p) => p.uid)), [participants]);
@@ -35,6 +42,11 @@ export const InvitePage: React.FC<InvitePageProps> = ({ chatKey }) => {
   const availableContacts = useMemo(
     () => contacts.filter((c) => !participantUids.has(c.systemUid)),
     [contacts, participantUids],
+  );
+
+  const selectedUids = useMemo(
+    () => new Set(selectedContacts.map((c) => c.uid)),
+    [selectedContacts],
   );
 
   const logic = useInvitePageLogic({
@@ -56,9 +68,10 @@ export const InvitePage: React.FC<InvitePageProps> = ({ chatKey }) => {
     try {
       await addMembersToChat({
         chat_key: chatKey,
-        uid_users_list: selectedContacts.map((c) => c.systemUid),
+        uid_users_list: selectedContacts.map((c: Contact) => c.systemUid),
       });
 
+      clear();
       setActiveSection("main");
     } catch {
       alert("Ошибка при добавлении пользователей");
@@ -75,7 +88,15 @@ export const InvitePage: React.FC<InvitePageProps> = ({ chatKey }) => {
           <div className="flex flex-col gap-2">
             <ListSeparator text="Мои контакты" />
             {logic.filteredLocalContacts.map((c) => {
-              return <ContactCardFeature contact={c} key={c.systemUid} />;
+              return (
+                <ContactCardFeature
+                  contact={c}
+                  key={c.systemUid}
+                  isSelecting
+                  isChecked={selectedUids.has(c.uid)}
+                  onToggle={toggle}
+                />
+              );
             })}
           </div>
         )}

@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 
 import { ChatListItem } from "@/entities/chat/model/types";
 import { useChatListStore } from "@/features/chatList/model/useChatListStore";
-import { useSelectContactsStore } from "@/features/contacts/model/SelectContactsStore";
 import { cn } from "@/shared/shadcn/lib/utils";
 import { Button } from "@/shared/shadcn/ui/button";
+import { useStep2SelectionStore } from "@/widgets/createChat/model/step2SelectionStore";
 
 import { createChat } from "../api/ws";
 import { mapChatObjectToChatItem } from "../model/mapper";
@@ -22,7 +22,8 @@ export const SubmitCreateChatBtn: React.FC<SubmitCreateChatBtnProps> = ({ classN
   const queryClient = useQueryClient();
   const { upsertChat } = useChatListStore();
   const { formData, setStep } = useCreateChatStore();
-  const selected = useSelectContactsStore((s) => s.selected);
+  const selected = useStep2SelectionStore((s) => s.selected);
+  const clearSelected = useStep2SelectionStore((s) => s.clear);
   const uids = selected.map((c) => c.systemUid);
   const handleCreateChat = async () => {
     setStep("loading");
@@ -50,6 +51,7 @@ export const SubmitCreateChatBtn: React.FC<SubmitCreateChatBtnProps> = ({ classN
         });
 
         useChatListStore.getState().reset();
+        clearSelected();
 
         await queryClient.refetchQueries({
           queryKey: ["chats"],

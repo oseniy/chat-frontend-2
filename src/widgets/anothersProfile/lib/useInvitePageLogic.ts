@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from "react";
-import { useShallow } from "zustand/shallow";
+import { useMemo } from "react";
 
 import { Contact } from "@/entities/contact/model/types";
-import { useSelectContactsStore } from "@/features/contacts/model/SelectContactsStore";
+
+import { useInviteSelectionStore } from "../model/inviteSelectionStore";
 
 type UseInvitePageLogicProps = {
   contacts: Contact[];
@@ -15,17 +15,10 @@ export const useInvitePageLogic = ({
   search,
   isInitialized,
 }: UseInvitePageLogicProps) => {
-  const { setIsSelecting, resetSelectionStore, selectedContacts } = useSelectContactsStore(
-    useShallow((s) => ({
-      setIsSelecting: s.setIsSelecting,
-      resetSelectionStore: s.reset,
-      selectedContacts: s.selected,
-    })),
-  );
+  const selectedContacts = useInviteSelectionStore((s) => s.selected);
   const isSelected = selectedContacts.length > 0;
   const isSearching = search.trim().length > 0;
 
-  // Фильтрация локальных контактов
   const filteredLocalContacts = useMemo(() => {
     if (!isSearching) return contacts;
     const query = search.toLowerCase();
@@ -38,12 +31,6 @@ export const useInvitePageLogic = ({
     );
   }, [contacts, search, isSearching]);
 
-  useEffect(() => {
-    setIsSelecting(true);
-    return () => resetSelectionStore();
-  }, []);
-
-  // Вычисляемые состояния для UI
   const showLocalContacts =
     filteredLocalContacts.length > 0 || (!isSearching && contacts.length > 0);
   const showNoResults = isSearching && filteredLocalContacts.length === 0;

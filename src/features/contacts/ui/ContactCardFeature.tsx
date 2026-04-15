@@ -4,23 +4,23 @@ import { Contact } from "@/entities/contact/model/types";
 import { ContactCard } from "@/entities/contact/ui/contactCard";
 import { Checkbox } from "@/shared/ui/checkbox";
 
-import { useSelectContactsStore } from "../model/SelectContactsStore";
-
 type ContactCardFeatureProps = {
   contact: Contact;
+  isSelecting?: boolean;
+  isChecked?: boolean;
+  onToggle?: (contact: Contact) => void;
 };
 
-export const ContactCardFeature: React.FC<ContactCardFeatureProps> = ({ contact }) => {
-  const isSelecting = useSelectContactsStore((s) => s.isSelecting);
-  const toggleContact = useSelectContactsStore((s) => s.toggleContact);
-  const isChecked = useSelectContactsStore((s) =>
-    s.selected.some((item) => item.uid === contact.uid),
-  );
-
+export const ContactCardFeature: React.FC<ContactCardFeatureProps> = ({
+  contact,
+  isSelecting = false,
+  isChecked = false,
+  onToggle,
+}) => {
   return (
     <ContactCard
       contact={contact}
-      onClick={isSelecting ? () => toggleContact(contact) : undefined}
+      onClick={isSelecting && onToggle ? () => onToggle(contact) : undefined}
       after={isSelecting && <Checkbox checked={isChecked} />}
     />
   );
