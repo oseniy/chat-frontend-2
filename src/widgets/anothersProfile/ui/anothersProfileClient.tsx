@@ -7,6 +7,7 @@ import { ChatTypeLight } from "@/entities/chat/model/types";
 import { ContactListResponse } from "@/entities/contact/model/types";
 import { User } from "@/entities/user/model/types";
 import { useUserInfoStore } from "@/entities/user/model/useUserInfoStore";
+import { useChatListStore } from "@/features/chatList/model/useChatListStore";
 import { useIsMobileStore } from "@/shared/model/isMobile.store";
 import { SidebarHeader } from "@/shared/ui/sidebarHeader/sidebarHeader";
 
@@ -55,12 +56,27 @@ export const AnothersProfileClient: React.FC<AnothersProfileClientProps> = ({
     }
     setActiveTab("media");
     return () => resetTabsUI();
-  }, [chatInfo]);
+  }, [chatInfo, setActiveTab, resetTabsUI]);
 
   const displayData = cachedUserInfo ?? chatInfo;
 
+  const finalChatId = useChatListStore((s) => {
+    if (!chatKeyProp) return null;
+    const cleanUid = chatKeyProp.replace("user_", "");
+
+    const chatEntry = Object.values(s.chatsByKey).find((c) => {
+      const data = c as unknown as Record<string, unknown>;
+      const innerChat = data.chat as Record<string, unknown> | undefined;
+      return (
+        data.chat_key === cleanUid || data.chat_key === chatKeyProp || innerChat?.uid === cleanUid
+      );
+    }) as unknown as Record<string, unknown>;
+
+    return (chatEntry?.id || chatEntry?.index) as number | null;
+  });
+
   const contextMenu = useAnothersProfileContextMenu({
-    chatId: displayData?.id || null,
+    chatId: typeof finalChatId === "number" ? finalChatId : null,
     chatName: displayData?.fullName ?? "",
   });
 

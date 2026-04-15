@@ -26,6 +26,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
         contacts={contacts}
         chatType={chatType}
         chatInfo={response?.data as User | null}
+        chatKey={chatKey}
       />
     );
   } else {
