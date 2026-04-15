@@ -8,10 +8,10 @@ type NewStatusUserObject = {
   user: UserPreviewDto & { was_online_at?: number };
 };
 
-export const handleNewStatusUser: WSHandler<NewStatusUserObject> = (data) => {
+export const handleNewStatusUser: WSHandler = (data) => {
   if (data.status !== "OK" || !data.object) return;
 
-  const { is_online, user } = data.object;
+  const { is_online, user } = data.object as NewStatusUserObject;
   if (!user?.uid) return;
 
   const chatListStore = useChatListStore.getState();
