@@ -4,8 +4,9 @@ import { getImageSize } from "./getImageSize";
 export const checkAvatarParams = async (
   file: File,
 ): Promise<{ isValid: boolean; error?: string }> => {
+  if (!file) return { isValid: false, error: "Файл не выбран." };
   if (file.size === 0) {
-    return { isValid: false, error: "Файл не выбран." };
+    return { isValid: false, error: "Загружаемый файл пуст." };
   }
   if (!AVATAR_PARAMS.types.includes(file.type)) {
     return {
