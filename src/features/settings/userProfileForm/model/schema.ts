@@ -43,7 +43,6 @@ export const changeProfileSchema = z.object({
   nickname: z
     .string()
     .min(1, "Заполните поле")
-    .min(5, "Не менее 5 символов")
     .max(32, "Не более 32 символов")
     .regex(/^[A-Za-z0-9_-]+$/, {
       message: "Допустимы: латиница, цифры, дефис (-) и подчёркивание (_)",
@@ -54,6 +53,7 @@ export const changeProfileSchema = z.object({
     .refine((val) => !/^[-_]|[-_]$/.test(val), {
       message: "Никнейм не должен начинаться или заканчиваться на - или _",
     })
+    .min(5, "Не менее 5 символов")
     .refine((val) => !/--|__/.test(val), {
       message: "Нельзя использовать -- или __ подряд",
     }),
