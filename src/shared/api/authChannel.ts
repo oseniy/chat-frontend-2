@@ -1,4 +1,4 @@
-type AuthChannelMessage = { type: "logout" };
+type AuthChannelMessage = { type: "logout" | "login" };
 
 let channel: BroadcastChannel | null = null;
 
@@ -14,6 +14,10 @@ const getChannel = (): BroadcastChannel | null => {
 
 export const broadcastLogout = () => {
   getChannel()?.postMessage({ type: "logout" } satisfies AuthChannelMessage);
+};
+
+export const broadcastLogin = () => {
+  getChannel()?.postMessage({ type: "login" } satisfies AuthChannelMessage);
 };
 
 export const onAuthChannelMessage = (callback: (msg: AuthChannelMessage) => void) => {

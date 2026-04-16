@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { saveFlashCallAuthAction } from "@/features/auth/phoneForm/lib/actions/saveFlashCallAuth";
+import { broadcastLogin } from "@/shared/api/authChannel";
 import { getApiClient } from "@/shared/api/getApiClient";
 import { useAuthStore } from "@/shared/api/store";
 
@@ -76,6 +77,7 @@ export const useFlashCall = () => {
 
                 setAccessToken(tokens.access);
                 setStage("success");
+                broadcastLogin();
 
                 router.refresh();
                 setTimeout(() => {
