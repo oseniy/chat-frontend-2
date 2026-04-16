@@ -103,23 +103,22 @@ export const DeleteMessageModal: React.FC<DeleteMessageModalProps> = ({
         )}
       </AlertDialogHeader>
 
-      <AlertDialogFooter className="flex-row gap-2">
+      <AlertDialogFooter className="flex-row flex-wrap gap-2">
         <Button
-          variant="default"
+          variant="outline"
           size="smSubtext"
-          className="bg-primary flex-1 text-white"
-          onClick={onDelete}
-        >
-          Удалить
-        </Button>
-
-        <Button
-          variant="default"
-          size="smSubtext"
-          className="text-primary flex-1 bg-transparent"
+          className="text-primary border-primary desktop:flex-0 desktop:order-2 flex-1 bg-transparent"
           onClick={onClose}
         >
           Отмена
+        </Button>
+        <Button
+          variant="default"
+          size="smSubtext"
+          className="bg-primary desktop:flex-0 order-2 flex-1"
+          onClick={onDelete}
+        >
+          Удалить
         </Button>
       </AlertDialogFooter>
     </ModalDialog>
