@@ -4,39 +4,36 @@ export const changeProfileSchema = z.object({
   name: z
     .string()
     .min(1, "Заполните поле")
-    .min(2, "Не менее 2 символов")
     .max(30, "Не более 30 символов")
     .regex(/^[A-Za-zА-Яа-яЁё\s-]+$/, {
       message: "Допустимыми символами являются буквы, пробелы и тире",
     })
-    .refine((val) => /[A-Za-zА-Яа-яЁё]/.test(val), {
-      message: "Имя должно содержать буквы",
-    })
     .refine((val) => !/^-|-$/.test(val), {
       message: "Имя не должно начинаться или заканчиваться с тире",
     })
+    .refine((val) => /[A-Za-zА-Яа-яЁё]/.test(val), {
+      message: "Имя должно содержать буквы",
+    })
     .refine((val) => !/--/.test(val), {
       message: "Нельзя использовать два дефиса подряд",
-    }),
+    })
+    .min(2, "Не менее 2 символов"),
   lastName: z
     .string()
     .max(30, "Не более 30 символов")
     .regex(/^[A-Za-zА-Яа-яЁё\s-]+$/, {
       message: "Допустимыми символами являются буквы, пробелы и тире",
     })
-    .transform((val) => val.trim())
-    .refine((val) => val === "" || val.length >= 2, {
-      message: "Не менее 2 символов",
+    .refine((val) => !/^-|-$/.test(val), {
+      message: "Имя не должно начинаться или заканчиваться с тире",
     })
-    .refine((val) => val === "" || /[A-Za-zА-Яа-яЁё]/.test(val), {
-      message: "Фамилия должна содержать буквы",
+    .refine((val) => /[A-Za-zА-Яа-яЁё]/.test(val), {
+      message: "Имя должно содержать буквы",
     })
-    .refine((val) => val === "" || !/^-|-$/.test(val), {
-      message: "Фамилия не должна начинаться или заканчиваться с тире",
-    })
-    .refine((val) => val === "" || !/--/.test(val), {
+    .refine((val) => !/--/.test(val), {
       message: "Нельзя использовать два дефиса подряд",
     })
+    .min(2, "Не менее 2 символов")
     .or(z.literal("")),
   phone: z.string().min(2, "Не менее 2 символов").max(30, "Не более 30 символов").optional(),
   description: z.string().min(1).max(140, "Не более 140 символов").or(z.literal("")),
