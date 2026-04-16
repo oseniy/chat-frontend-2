@@ -28,7 +28,7 @@ export const ChatInfoList = ({ className, initialData, isOwner }: ChatInfoListPr
   const inviteLink = isLoading
     ? "..."
     : isError
-      ? "ошибка генерации пригласительной ссылки"
+      ? "Ошибка генерации пригласительной ссылки"
       : fullInviteLink;
 
   const hasInviteLink = !!fullInviteLink;
@@ -36,13 +36,15 @@ export const ChatInfoList = ({ className, initialData, isOwner }: ChatInfoListPr
   return (
     <div className="flex w-full flex-col gap-2">
       <div className={cn("flex w-full flex-col rounded-lg bg-white", className)}>
-        {description && <InfoItem title="Описание" text={description} className="text-black" />}
+        {description && description.trim() !== "" && (
+          <InfoItem title="Описание" text={description} className="text-black" />
+        )}
       </div>
       {isOwner && (
         <div className={cn("flex w-full flex-col rounded-lg bg-white", className)}>
           <InfoItem
             copy
-            title="ссылка на приглашение"
+            title="Ссылка на приглашение в группу"
             text={inviteLink}
             className={cn(hasInviteLink ? "text-primary" : "text-black")}
           />

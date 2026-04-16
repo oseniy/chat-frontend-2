@@ -32,9 +32,33 @@ export const Field = ({ name, title, maxLength, position, className }: FieldProp
   const isLimitReached = length >= maxLength;
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const nextValue = e.target.value;
+    let nextValue = e.target.value;
+
     if (nextValue.length > maxLength) return;
+
+    nextValue = nextValue.replace(/^\s+/, "");
+
+    nextValue = nextValue.replace(/\s{2,}/g, " ");
+
+    if (nextValue.endsWith(" ")) {
+      const withoutLast = nextValue.slice(0, -1);
+      if (withoutLast.endsWith(" ")) {
+        nextValue = withoutLast;
+      }
+    }
+
     onChange(nextValue);
+  };
+
+  const handleBlur = () => {
+    if (!value) return;
+
+    // убираем пробелы в конце (и заодно в начале, на всякий)
+    const trimmed = value.trim();
+
+    if (trimmed !== value) {
+      onChange(trimmed);
+    }
   };
 
   useEffect(() => {
@@ -62,6 +86,7 @@ export const Field = ({ name, title, maxLength, position, className }: FieldProp
           placeholder=" "
           rows={1}
           value={value}
+          onBlur={handleBlur}
           onChange={handleChange}
           className="subtext z-10 h-14 min-h-14 resize-none overflow-hidden p-0 pt-6 pr-9 pl-3"
         />

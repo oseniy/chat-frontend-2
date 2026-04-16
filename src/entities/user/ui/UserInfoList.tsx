@@ -32,7 +32,7 @@ export const UserInfoList: React.FC<UserInfoListProps> = ({ className, initialDa
         />
       )}
       {birthday && <InfoItem title="День рождения" text={birthday} className="text-black" />}
-      {bio && <InfoItem title="Описание" text={bio} className="text-black" />}
+      {bio && bio.trim() !== "" && <InfoItem title="Описание" text={bio} className="text-black" />}
     </div>
   );
 };

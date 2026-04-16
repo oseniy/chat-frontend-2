@@ -160,7 +160,7 @@ export const ChatHeader = ({ chat, backHref, profileHref, join, chatKey }: Props
           disablePrev={searchValue === "" || page === 1}
           disableNext={resultsCount === 0 || page === resultsCount}
           isSearchOpen={isSearchOpen}
-          className={cn(isSearchOpen ? "flex w-full pl-3" : "hidden")}
+          className={cn(isSearchOpen ? "flex w-full pl-13" : "hidden")}
         />
 
         <ChatHeaderActions
