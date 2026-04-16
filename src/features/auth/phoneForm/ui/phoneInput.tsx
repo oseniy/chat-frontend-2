@@ -12,6 +12,7 @@ type PhoneInputProps = {
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
   onFocus?: React.FocusEventHandler<HTMLInputElement>;
   disabled?: boolean;
+  autoFocus?: boolean; // Тип уже на месте, это хорошо
 };
 
 export const PhoneInput: React.FC<PhoneInputProps> = ({
@@ -23,6 +24,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   onFocus,
   onChange,
   disabled,
+  autoFocus, // 1. Добавляем сюда получение пропса
 }) => {
   return (
     <div className={cn("", className)}>
@@ -39,6 +41,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         onBlur={onBlur}
         onFocus={onFocus}
         disabled={disabled}
+        autoFocus={autoFocus}
       />
     </div>
   );

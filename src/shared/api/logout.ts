@@ -10,37 +10,27 @@ import { disconnectWS } from "./ws/wsClient";
 
 export const logout = async (options?: { broadcast?: boolean }) => {
   const { broadcast = true } = options ?? {};
-  const store = useAuthStore.getState();
-  const chatListStore = useChatListStore.getState();
-  const chatStore = useChatStore.getState();
-  const contactsStore = useContactStore.getState();
-  const queryClient = getQueryClient();
 
-  if (!store.accessToken) {
-    return;
-  }
+  // 1. Ставим метку
+  localStorage.setItem("isLoggedOut", "true");
 
-  queryClient.clear();
-  // чистим access token
-  store.clearAccessToken();
+  // 2. Чистим стейты (синхронно)
+  useAuthStore.getState().clearAccessToken();
   useUserStore.getState().reset();
-  chatListStore.reset();
-  chatStore.reset();
-  contactsStore.reset();
+  useChatListStore.getState().reset();
+  useChatStore.getState().reset();
+  useContactStore.getState().reset();
+  getQueryClient().clear();
 
-  // чистим client-side куки
-  document.cookie = "phone=; Max-Age=0; path=/";
-
+  if (broadcast) broadcastLogout();
   disconnectWS();
 
-  if (broadcast) {
-    broadcastLogout();
-  }
+  // 3. Пытаемся стукнуть в API (без await)
+  fetch("/api/logout", { method: "POST", credentials: "include" }).catch(() => {});
 
-  try {
-    // серверный логаут для httpOnly refresh token
-    await fetch("/api/logout", { method: "POST", credentials: "include" });
-  } catch {
-    // игнорируем ошибки
+  // 4. РЕДИРЕКТ С ПРОВЕРКОЙ
+  // Если мы уже на странице авторизации, НЕ ПЕРЕЗАГРУЖАЕМ её
+  if (!window.location.pathname.startsWith("/auth")) {
+    window.location.href = "/auth/";
   }
 };
