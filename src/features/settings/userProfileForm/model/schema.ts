@@ -3,6 +3,7 @@ const currentYear = new Date().getFullYear();
 export const changeProfileSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, "Заполните поле")
     .max(30, "Не более 30 символов")
     .regex(/^[A-Za-zА-Яа-яЁё\s-]+$/, {
@@ -20,6 +21,7 @@ export const changeProfileSchema = z.object({
     .min(2, "Не менее 2 символов"),
   lastName: z
     .string()
+    .trim()
     .max(30, "Не более 30 символов")
     .regex(/^[A-Za-zА-Яа-яЁё\s-]+$/, {
       message: "Допустимыми символами являются буквы, пробелы и тире",

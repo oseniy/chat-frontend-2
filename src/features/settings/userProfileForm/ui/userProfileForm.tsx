@@ -65,7 +65,7 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
     defaultValues: getDefaultValues(name, lastName, nickname, description),
   });
 
-  const { register, handleSubmit, control, formState } = form;
+  const { register, handleSubmit, control, formState, setValue } = form;
   const { errors, isValid, isDirty, isSubmitting } = formState;
 
   const handleSubmitForm = async (data: FormData) => {
@@ -102,6 +102,7 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
                   .replace(/^\s+/, "");
 
                 e.target.value = value;
+                setValue("name", value, { shouldValidate: true, shouldDirty: true });
               },
             })}
             inputClassName="desktop:border-0 font-normal"
@@ -120,6 +121,7 @@ export const UserProfileForm: React.FC<UserProfileFormProps> = ({
                   .replace(/^\s+/, "");
 
                 e.target.value = value;
+                setValue("lastName", value, { shouldValidate: true, shouldDirty: true });
               },
             })}
             inputClassName="desktop:border-0 font-normal"
