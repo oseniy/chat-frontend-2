@@ -9,6 +9,7 @@ import { cn } from "@/shared/shadcn/lib/utils";
 import { Button } from "@/shared/shadcn/ui/button";
 import ProfileCall from "@/shared/ui/icons/chat/header/profileCall.svg";
 import ProfileCallInChatDesktop from "@/shared/ui/icons/chat/header/profileCallDesktop.svg";
+import SearchMobile from "@/shared/ui/icons/chat/header/searchMobile.svg";
 import SearchInChat from "@/shared/ui/icons/chat/header/searchWebInChat.svg";
 
 type Props = {
@@ -36,7 +37,7 @@ export const ChatHeaderActions = ({
     setIsLoading(false);
   }, [join]);
   return (
-    <div className={cn("flex shrink-0 items-center", className)}>
+    <div className={cn("items-normal flex shrink-0", className)}>
       {join ? (
         <div className="flex gap-3">
           <Button
@@ -57,9 +58,10 @@ export const ChatHeaderActions = ({
           <button
             aria-label="Поиск"
             onClick={onSearchClick}
-            className="desktop:flex hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full"
+            className="desktop:flex h-9 w-9 cursor-pointer items-center justify-center rounded-full"
           >
-            <SearchInChat className="text-primary h-11 w-11" />
+            <SearchInChat className="text-primary desktop:block hidden h-11 w-11" />
+            <SearchMobile className="text-primary desktop:hidden h-11 w-11" />
           </button>
           {chatType == "chat" && (
             <>

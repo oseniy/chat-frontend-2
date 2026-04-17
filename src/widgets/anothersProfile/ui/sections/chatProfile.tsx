@@ -80,8 +80,8 @@ export const ChatProfile: React.FC<ChatProfileProps> = ({
             avatarUrl={initialData?.avatar}
             variant="chat"
           />
-          <div className="absolute bottom-3 left-4 text-white">
-            <p className="title font-medium">{initialData?.title}</p>
+          <div className="absolute bottom-3 left-4 w-full pr-8 text-white">
+            <p className="title truncate font-medium">{initialData?.title}</p>
             <p className="text">{getMembersLabel()}</p>
           </div>
         </div>
@@ -91,7 +91,15 @@ export const ChatProfile: React.FC<ChatProfileProps> = ({
         </div>
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <OurTabsList>
-            <OurTabsTrigger value="participants">Участники</OurTabsTrigger>
+            <OurTabsTrigger
+              value="participants"
+              onClick={() => {
+                setActiveSection("tab");
+                setActiveTab("participants");
+              }}
+            >
+              Участники
+            </OurTabsTrigger>
             <OurTabsTrigger value="media">Медиа</OurTabsTrigger>
             <OurTabsTrigger value="files">Файлы</OurTabsTrigger>
             <OurTabsTrigger value="voices">Голосовые</OurTabsTrigger>

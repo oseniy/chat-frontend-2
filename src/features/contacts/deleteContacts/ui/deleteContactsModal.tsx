@@ -44,17 +44,22 @@ export const DeleteContactsModal: React.FC<DeleteContactsModalProps> = ({
 
   // Используем замороженное число
   const text =
-    "удалить " + frozenCount + pluralize(frozenCount, " контакт", " контакта", " контактов");
+    frozenCount === 1
+      ? "Вы уверены, что хотите удалить контакт"
+      : "Вы уверены, что хотите удалить " +
+        frozenCount +
+        pluralize(frozenCount, " контакт", " контакта", " контактов");
+
   return (
     <ModalDialog className={cn(className)} open={isOpen} onOpenChange={onClose}>
       <AlertDialogHeader>
         <AlertDialogHeader>
           <AlertDialogTitle>
-            <span className="font-medium">Удалить контакты</span>
+            <span className="font-medium">Удалить {frozenCount > 1 ? "контакты" : "контакт"}</span>
           </AlertDialogTitle>
         </AlertDialogHeader>
         <AlertDialogDescription>
-          <span className="subtext text-gray">Вы действительно хотите {text}?</span>
+          <span className="subtext text-gray">{text}?</span>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter className="flex flex-row flex-wrap gap-2">

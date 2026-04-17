@@ -27,11 +27,13 @@ export const useInvitePageLogic = ({
 
   // Фильтрация локальных контактов
   const filteredLocalContacts = useMemo(() => {
+    console.log("contacts", contacts);
     if (!isSearching) return contacts;
     const query = search.toLowerCase();
     return contacts.filter(
       (c) =>
         c.fullName?.toLowerCase().includes(query) ||
+        c.nickname?.toLowerCase().includes(query) ||
         c.phone.includes(query) ||
         c.nickname?.toLowerCase().includes(query) ||
         c.username?.toLowerCase().includes(query),

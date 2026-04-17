@@ -26,7 +26,12 @@ export const ChatHeaderUser = ({
   isInfoHidden,
 }: Props) => {
   return (
-    <div className="border-light-gray desktop:border-none flex h-[60px] min-w-0 flex-1 items-center gap-3 border-b pr-3">
+    <div
+      className={cn(
+        "border-light-gray desktop:border-none flex h-[60px] min-w-0 flex-1 items-center gap-3 border-b pr-3",
+        isInfoHidden && "border-none",
+      )}
+    >
       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full">
         {photo ? (
           <Image src={photo} alt="profile" fill className="object-cover" />

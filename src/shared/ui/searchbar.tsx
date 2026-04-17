@@ -46,7 +46,7 @@ export const Searchbar: React.FC<SearchbarProps> = ({
           onChange={(e) => onSearchChange(e.target.value)}
         />
         <SearchIcon className="text-gray absolute top-1/2 left-4 h-4.5 w-4.5 -translate-y-1/2" />
-        {value && (
+        {value && !isSearchOpen && (
           <Button
             variant={"text"}
             size={"inline"}
