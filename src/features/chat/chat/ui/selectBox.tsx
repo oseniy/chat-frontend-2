@@ -51,7 +51,7 @@ export const SelectBox: React.FC<SelectBoxProps> = ({ className }) => {
         <Button
           variant={"text"}
           size={"inline"}
-          className="text-gray h-5 w-5 shrink-0"
+          className="text-gray desktop:hover:text-gray desktop:active:text-primary-dark h-5 w-5 shrink-0"
           onClick={exitSelectionMode}
         >
           <Close className="h-5 w-5" />
