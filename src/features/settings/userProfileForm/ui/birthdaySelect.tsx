@@ -36,12 +36,17 @@ export const BirthdaySelect: React.FC<BirthdaySelectProps> = ({ control }) => {
 
       if (day && month && year) {
         const date = new Date(year, month - 1, day);
+        const now = new Date();
+        const todayUTC = new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+        );
+        const selectedUTC = new Date(Date.UTC(year, month - 1, day));
 
         const isValidDate =
           date.getFullYear() === year &&
           date.getMonth() === month - 1 &&
           date.getDate() === day &&
-          date <= new Date();
+          selectedUTC <= todayUTC;
 
         if (!isValidDate) {
           setBirthdayError("Укажите корректную дату рождения");

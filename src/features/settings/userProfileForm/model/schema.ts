@@ -90,7 +90,12 @@ export const changeProfileSchema = z.object({
           return false;
         }
 
-        if (date > new Date()) return false;
+        const now = new Date();
+        const todayUTC = new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+        );
+        const selectedUTC = new Date(Date.UTC(year, month - 1, day));
+        if (selectedUTC > todayUTC) return false;
 
         return true;
       },
