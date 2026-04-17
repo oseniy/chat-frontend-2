@@ -50,6 +50,7 @@
   --muted-foreground: #00000033;
   --caption: #ffffff;
   --error: #ff0000;
+  --active-error: #fb6266;
   --black: #1c1c1e;
   --gray: #747474;
   --light-gray: #c5c5c5;
@@ -142,6 +143,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-caption: var(--caption);
   --color-error: var(--error);
+  --color-active-error: var(--active-error);
   --color-black: var(--black);
   --color-gray: var(--gray);
   --color-light-gray: var(--light-gray);

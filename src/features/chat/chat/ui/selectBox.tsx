@@ -66,7 +66,7 @@ export const SelectBox: React.FC<SelectBoxProps> = ({ className }) => {
         <Button
           variant={"text"}
           size={"inline"}
-          className="text-gray h-9 w-9 shrink-0"
+          className="text-gray desktop:hover:text-gray desktop:active:text-primary-dark h-9 w-9 shrink-0"
           onClick={handleForward}
         >
           <Forward className="h-6 w-6" />
@@ -74,7 +74,7 @@ export const SelectBox: React.FC<SelectBoxProps> = ({ className }) => {
         <Button
           variant="text"
           size="inline"
-          className="text-gray h-9 w-9 shrink-0"
+          className="text-gray desktop:hover:text-gray desktop:active:text-primary-dark h-9 w-9 shrink-0"
           onClick={handleCopy}
         >
           <Copy className="h-6 w-6" />
@@ -82,7 +82,7 @@ export const SelectBox: React.FC<SelectBoxProps> = ({ className }) => {
         <Button
           variant={"text"}
           size={"inline"}
-          className="text-error h-9 w-9 shrink-0"
+          className="text-error desktop:hover:text-error desktop:active:text-active-error h-9 w-9 shrink-0"
           onClick={() => {
             openModal("deleteMessage", { messageId: "", chatKey: chatKey! });
           }}
