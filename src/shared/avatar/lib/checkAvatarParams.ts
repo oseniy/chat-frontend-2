@@ -10,7 +10,7 @@ export const checkAvatarParams = async (
   if (!AVATAR_PARAMS.types.includes(file.type)) {
     return {
       isValid: false,
-      error: "Недопустимый формат файла. Допустимые форматы: PNG, JPG, JPEG, WebP, SVG.",
+      error: "Недопустимый формат файла. Допустимые форматы: PNG, JPG, JPEG, WebP",
     };
   }
   // Проверяем размер файла ПЕРЕД декодированием

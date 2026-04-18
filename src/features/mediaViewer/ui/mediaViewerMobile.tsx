@@ -6,10 +6,11 @@ import Forwarded from "@icons/chat/forwardedd.svg";
 import SlideArrow from "@icons/chat/slideLeft.svg";
 import Trash from "@icons/sendFiles/trash.svg";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { downloadFile } from "@/shared/lib/downloadFile";
+import { cn } from "@/shared/shadcn/lib/utils";
 import { Button } from "@/shared/shadcn/ui/button";
 import { Toast } from "@/shared/toast/ui/toast";
 
@@ -22,13 +23,28 @@ export const MediaViewerMobile = () => {
   const [isToastOpen, setIsToastOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isClamped, setIsClamped] = useState(true);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isVisible, setIsVisible] = useState(false); // Для анимации появления
 
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
   const minSwipeDistance = 50;
 
+  // Плавное закрытие
+  const handleClose = useCallback(() => {
+    setIsVisible(false);
+    setTimeout(close, 250); // Ждем завершения анимации
+  }, [close]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => setIsVisible(true), 10);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  // Swipe logic
   const onTouchStart = (e: React.TouchEvent) => {
     touchEndX.current = null;
     touchStartX.current = e.targetTouches[0].clientX;
@@ -67,39 +83,48 @@ export const MediaViewerMobile = () => {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") handleClose();
       if (e.key === "ArrowRight" && mediaIndex < (message?.filesList?.length ?? 0) - 1) next();
       if (e.key === "ArrowLeft" && mediaIndex > 0) prev();
     };
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [close, next, prev, mediaIndex, message?.filesList?.length]);
+  }, [handleClose, next, prev, mediaIndex, message?.filesList?.length]);
 
   if (!isOpen || !message) return null;
 
   const media = message.filesList[mediaIndex];
+  if (!media) return null;
 
   const time = new Date(message.createdAt * 1000).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
   });
-  if (!media) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black"
+      className={cn(
+        "fixed inset-0 z-50 bg-black transition-opacity duration-250 ease-in-out",
+        isVisible ? "opacity-100" : "opacity-0",
+      )}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      <div className="absolute top-8 right-8 left-8 flex gap-2 text-white">
+      {/* Header - Уезжает вверх */}
+      <div
+        className={cn(
+          "absolute top-8 right-8 left-8 flex gap-2 text-white transition-transform duration-300",
+          isVisible ? "translate-y-0" : "-translate-y-10",
+        )}
+      >
         <div className="flex w-full items-center justify-between">
           <Button
-            variant={"text"}
+            variant="text"
             size="icon"
             className="flex h-5 w-3 items-center gap-2"
-            onClick={close}
+            onClick={handleClose}
           >
             <SlideArrow className="h-5 w-3 text-white" />
           </Button>
@@ -110,57 +135,62 @@ export const MediaViewerMobile = () => {
         </div>
       </div>
 
+      {/* Media - Мягко увеличивается */}
       <div className="flex h-full items-center justify-center">
-        <div className="relative h-full max-h-[70vh] w-full">
+        <div
+          className={cn(
+            "relative h-full max-h-[70vh] w-full transition-all duration-300 ease-out",
+            isVisible ? "scale-100 opacity-100" : "scale-90 opacity-0",
+          )}
+        >
           {(media.fileType?.startsWith("image") || media.fileType?.startsWith("application")) && (
             <Image
               src={media.fileUrl}
-              alt={media.fileUrl.split("/").pop() || ""}
+              alt="media"
               fill
-              sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 626px"
+              sizes="100vw"
               className="object-contain"
+              priority
             />
           )}
 
           {media.fileType?.startsWith("video") && (
-            <video src={media.fileUrl} controls autoPlay className="max-h-[80vh]" />
+            <video src={media.fileUrl} controls autoPlay className="max-h-[80vh] w-full" />
           )}
         </div>
       </div>
 
+      {/* Content - Выезжает снизу */}
       {message.content.trim() && (
-        <div className="absolute bottom-[80px] left-1/2 z-10 w-full -translate-x-1/2 px-0">
+        <div
+          className={cn(
+            "absolute bottom-[100px] left-1/2 z-10 w-full -translate-x-1/2 px-4 transition-all duration-300",
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0",
+          )}
+        >
           <div
             onClick={toggleExpansion}
-            className={`scrollbar-hide mx-auto w-full rounded-md bg-[#0000004D] px-4 py-2 text-center leading-snug text-white transition-all duration-300 ease-in-out ${
-              isExpanded
-                ? "max-h-[50vh] cursor-default overflow-y-auto"
-                : "max-h-[3.5em] cursor-pointer overflow-hidden"
-            }`}
+            className={cn(
+              "scrollbar-hide mx-auto w-full rounded-md bg-[#0000004D] px-4 py-2 text-center leading-snug text-white transition-all duration-300 ease-in-out",
+              isExpanded ? "max-h-[50vh] overflow-y-auto" : "max-h-[3.5em] overflow-hidden",
+            )}
           >
             <p className={isClamped ? "line-clamp-2" : ""}>{message.content}</p>
           </div>
         </div>
       )}
 
-      {isToastOpen && (
-        <div className="absolute top-1/2 left-1/2 z-50 w-full max-w-[90%] -translate-x-1/2 -translate-y-1/2">
-          <Toast
-            message="Файл успешно скачан"
-            onClose={() => setIsToastOpen(false)}
-            icon={{
-              mobile: "/download.svg",
-              desktop: "/download.svg",
-            }}
-          />
-        </div>
-      )}
-
-      <div className="absolute bottom-0 left-0 z-20 flex w-full items-center justify-between p-4">
+      {/* Footer Actions */}
+      <div
+        className={cn(
+          "absolute bottom-0 left-0 z-20 flex w-full items-center justify-between p-4 transition-transform duration-300",
+          isVisible ? "translate-y-0" : "translate-y-10",
+        )}
+      >
         <Button
-          variant={"text"}
-          size={"icon"}
-          className="h-11 w-11 text-white hover:text-white"
+          variant="text"
+          size="icon"
+          className="h-11 w-11 text-white"
           onClick={() => {
             downloadFile(media.fileUrl, media.fileUrl.split("/").pop());
             setIsToastOpen(true);
@@ -168,27 +198,33 @@ export const MediaViewerMobile = () => {
         >
           <Download className="h-6 w-6" />
         </Button>
-        <Button variant={"text"} size={"icon"} className="h-11 w-11 text-white hover:text-white">
+        <Button variant="text" size="icon" className="h-11 w-11 text-white">
           <Forwarded className="h-6 w-6" />
         </Button>
         <div className="flex flex-col items-center gap-1">
-          <span className="minitext font-medium text-white">
-            {message.fromUser.firstName + " " + message.fromUser.lastName}
+          <span className="minitext line-clamp-1 font-medium text-white">
+            {message.fromUser.firstName} {message.fromUser.lastName}
           </span>
-          <span className="caption text-white">{time}</span>
+          <span className="caption text-white/70">{time}</span>
         </div>
-        <Button variant={"text"} size={"icon"} className="hover:text-error h-11 w-11 text-white">
+        <Button variant="text" size="icon" className="hover:text-error h-11 w-11 text-white">
           <Trash className="h-6 w-6" />
         </Button>
-        <Button
-          onClick={close}
-          variant={"text"}
-          size={"icon"}
-          className="h-11 w-11 text-white hover:text-white"
-        >
+        <Button onClick={handleClose} variant="text" size="icon" className="h-11 w-11 text-white">
           <Close className="h-6 w-6" />
         </Button>
       </div>
+
+      {/* Toast Wrapper */}
+      {isToastOpen && (
+        <div className="animate-in fade-in zoom-in absolute top-1/2 left-1/2 z-50 w-full max-w-[90%] -translate-x-1/2 -translate-y-1/2 duration-200">
+          <Toast
+            message="Файл успешно скачан"
+            onClose={() => setIsToastOpen(false)}
+            icon={{ mobile: "/download.svg", desktop: "/download.svg" }}
+          />
+        </div>
+      )}
     </div>
   );
 };

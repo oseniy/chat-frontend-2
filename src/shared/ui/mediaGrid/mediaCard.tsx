@@ -72,9 +72,9 @@ export const MediaCard: React.FC<MediaCardProps> = ({
           variant="text"
           size="inline"
           onClick={() => item.id && onDelete(item.id)}
-          className="absolute right-3 bottom-3 z-10 h-9 w-9 rounded-md bg-black/50 hover:bg-black/50"
+          className="active:text-main-light-gray hover:text-gray-tone absolute right-3 bottom-3 z-10 h-9 w-9 rounded-md bg-[#00000033] text-white"
         >
-          <Trash className="h-5 w-5 text-white" />
+          <Trash className="h-5 w-5 transition-colors duration-300 hover:text-black" />
         </Button>
       )}
     </div>

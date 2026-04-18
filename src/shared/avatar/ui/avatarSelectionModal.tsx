@@ -38,8 +38,8 @@ export const AvatarSelectionModal: React.FC<AvatarSelectionModalProps> = ({
   const handleCropComplete = async (croppedUrl: string) => {
     const res = await fetch(croppedUrl);
     const blob = await res.blob();
-    const file = new File([blob], "avatar.jpg", {
-      type: "image/jpeg",
+    const file = new File([blob], "avatar.png", {
+      type: "image/png",
     });
 
     setSelectedFile(null);
@@ -93,7 +93,7 @@ export const AvatarSelectionModal: React.FC<AvatarSelectionModalProps> = ({
                 type="file"
                 hidden
                 ref={inputRef}
-                accept="image/png, image/jpeg, image/webp, image/svg+xml"
+                accept="image/png, image/jpeg, image/webp"
                 onChange={(e) => handleSelectFile(e.target.files?.[0] || null)}
               />
             )}

@@ -24,7 +24,7 @@ export type SendFileModalProps = {
 
 export const SendFileModal: React.FC<SendFileModalProps> = ({ className, isOpen, onClose }) => {
   const files = useSendFilesStore((s) => s.attachments);
-  const { clear, addFiles } = useSendFilesStore();
+  const { clear, addFiles, error } = useSendFilesStore();
   const { isKeyboardOpen } = useKeyboardOffset();
 
   const handleClose = () => {
@@ -44,7 +44,7 @@ export const SendFileModal: React.FC<SendFileModalProps> = ({ className, isOpen,
     await sendMessage(text, [], files);
   };
 
-  if (!files.length) return null;
+  if (!files.length && !error) return null;
   return (
     <ModalDialog
       className={cn(
@@ -58,7 +58,9 @@ export const SendFileModal: React.FC<SendFileModalProps> = ({ className, isOpen,
         <AlertDialogTitle className="flex items-center justify-between gap-2 pr-5">
           <div className="flex items-center gap-2">
             <span className="font-medium">
-              Отправить {files.length} {pluralize(files.length, "файл", "файла", "файлов")}
+              {error
+                ? "Ошибка при отправке"
+                : `Отправить ${files.length} ${pluralize(files.length, "файл", "файла", "файлов")}`}
             </span>
             <Button
               variant="text"
@@ -78,8 +80,9 @@ export const SendFileModal: React.FC<SendFileModalProps> = ({ className, isOpen,
         <AlertDialogDescription></AlertDialogDescription>
         <div className="w-full">
           <FileList files={files} />
+          <span className="text-error mt-2 text-sm">{error}</span>
           <MessageForm
-            className="mt-4 p-0 pr-5"
+            className={cn("mt-4 p-0 pr-5", error && "hidden")}
             variant="modal"
             isKeyboardOpen={isKeyboardOpen}
             onSubmitMessage={handleSend}
