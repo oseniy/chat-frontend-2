@@ -1,3 +1,4 @@
+import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { truncateFileName } from "@/shared/lib/truncateFilename";
 import { cn } from "@/shared/shadcn/lib/utils";
 import Audio from "@/shared/ui/icons/files/audioPreview.svg";
@@ -27,6 +28,14 @@ export const FileMessage: React.FC<FileMessageProps> = ({
 }) => {
   const { fileSize, isLoading } = useFileSize(file.src);
 
+  const isSelectionMode = useChatStore((s) => s.selectedMessageUids.size > 0);
+
+  const handleFileClick = (e: React.MouseEvent) => {
+    if (isSelectionMode) {
+      e.preventDefault();
+    }
+  };
+
   const formatFileSize = (bytes: number | null) => {
     if (!bytes) return "";
     if (bytes < 1024) return `${bytes} Б`;
@@ -38,6 +47,7 @@ export const FileMessage: React.FC<FileMessageProps> = ({
     <a
       download={file.src}
       href={file.src}
+      onClick={handleFileClick}
       className={cn("group flex items-center gap-3 px-3 py-2.5", className)}
     >
       <div className="flex h-12 w-12 items-center justify-center rounded-full">

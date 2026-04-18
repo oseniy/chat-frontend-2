@@ -1,6 +1,6 @@
 import { parseInviteUrl } from "@/entities/chat/lib/parseInviteUrl";
 import { MappedChatMessage } from "@/features/chat/chat/model/types/mappedTypes";
-import { AUDIO_TYPES, FILE_TYPES, IMAGE_TYPES } from "@/features/chatList/model/constants";
+import { AUDIO_TYPES, IMAGE_TYPES } from "@/features/chatList/model/constants";
 
 import { MessageBlock } from "./types";
 
@@ -41,14 +41,12 @@ export const buildMessageBlocks = (msg: MappedChatMessage): MessageBlock[] => {
           src: file.fileUrl,
         })),
       });
-    } else if (
-      msg.filesList.filter((f) => FILE_TYPES.some((t) => t.includes(f.fileType || ""))).length > 0
-    ) {
+    } else {
       blocks.push({
         type: "file",
         items: msg.filesList.map((file) => ({
           id: String(file.id),
-          type: FILE_TYPES.some((t) => t.includes(file.fileType || "")) ? "document" : "audio",
+          type: "document",
           fileType: file.fileType || "",
           title: file.name || file.fileUrl.split("/").pop(),
           src: file.fileUrl,
