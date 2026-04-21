@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { QueuedRequest, WSBaseResponse, WSHandler, WSStatus } from "./model/types";
 import { useWSRequestStore } from "./model/wsRequest.store";
+import { logIncomingMessage, logOutgoingMessage, logQueuedMessage } from "./wsLogger";
 
 let socket: WebSocket | null = null;
 let currentToken: string | null = null;
@@ -37,8 +38,9 @@ const drainQueue = () => {
   if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
   while (requestQueue.length > 0) {
-    const request = requestQueue.shift(); // Берем первый элемент (FIFO)
+    const request = requestQueue.shift();
     if (request) {
+      logOutgoingMessage(request);
       socket.send(JSON.stringify(request));
     }
   }
@@ -56,9 +58,10 @@ const attachHandlers = (ws: WebSocket) => {
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data) as WSBaseResponse<unknown>;
+      logIncomingMessage(data);
       handlers.forEach((handler) => handler(data));
     } catch {
-      console.log("WS raw message:", event.data);
+      console.warn("WS raw message:", event.data);
     }
   };
 
@@ -108,11 +111,11 @@ export const sendWSRequest = <TResponse>(
 
   // 2. Проверяем состояние
   if (!socket || socket.readyState !== WebSocket.OPEN) {
-    console.log(`⏳ WS: Socket not ready. Queuing action: ${action}`);
+    logQueuedMessage(message);
     requestQueue.push(message);
     scheduleReconnect();
   } else {
-    // Если всё ок — отправляем сразу
+    logOutgoingMessage(message);
     socket.send(JSON.stringify(message));
   }
 

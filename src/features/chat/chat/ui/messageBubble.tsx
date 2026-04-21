@@ -32,7 +32,7 @@ const messageBubbleComponent = memo(
     isChannel,
     ...dataAttributes
   }: MessageBubbleProps) => {
-    const isMine = chatMessage.fromUser.uid === currentUserId;
+    const isMine = isChannel ? false : chatMessage.fromUser.uid === currentUserId;
     const { isSelectionMode, selectedMessageUids, toggleMessageSelection } = useChatStore();
     const isSelected = selectedMessageUids.has(chatMessage.uid);
 

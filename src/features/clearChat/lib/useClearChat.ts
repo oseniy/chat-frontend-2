@@ -3,7 +3,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
-import { clearChat } from "@/entities/chat/api/clearChat";
+import { clearChatForMe } from "@/entities/chat/api/clearChatForMe";
+import { clearChatForAll } from "@/entities/chat/api/ws/clearChatForAll";
 import { ChatType } from "@/entities/chat/model/types";
 import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { useModalStore } from "@/entities/modals/model/useGlobalModalStore";
@@ -12,11 +13,12 @@ import { useToast } from "@/shared/toast/ui/toastProvider";
 
 type UseClearChatParams = {
   chatId: number | null;
+  chatKey: string | null;
   chatName: string;
   chatType: ChatType;
 };
 
-export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams) => {
+export const useClearChat = ({ chatId, chatKey, chatName, chatType }: UseClearChatParams) => {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const closeModal = useModalStore((s) => s.closeModal);
@@ -24,6 +26,7 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
 
   const [isLoading, setIsLoading] = useState(false);
 
+  // Определение варианта модалки
   const clearChatModalVariant =
     chatType === "public-channel" || chatType === "private-channel"
       ? ("channel" as const)
@@ -31,64 +34,68 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
         ? ("group" as const)
         : ("chat" as const);
 
+  // Определение текста Toast
   const toastMessage =
     chatType === "public-channel" || chatType === "private-channel"
       ? "История канала удалена"
       : "История чата удалена";
 
-  const confirmClear = useCallback(async () => {
-    // Получаем состояние сторов напрямую в момент клика, чтобы избежать проблем с замыканиями
-    const chatState = useChatStore.getState() as unknown as Record<string, unknown>;
-    const activeId = chatState.activeChatId || chatState.chatId || chatState.id;
+  const confirmClear = useCallback(
+    async (forAll: boolean) => {
+      const chatState = useChatStore.getState() as unknown as Record<string, unknown>;
+      const activeId = chatState.activeChatId || chatState.chatId || chatState.id;
 
-    const targetId = (chatId || activeId) as number | null;
+      const targetId = (chatId || activeId) as number | null;
 
-    if (!targetId) {
-      console.error("Не удалось найти ID чата для очистки");
-      return;
-    }
+      if (!targetId) {
+        console.error("Не удалось найти ID чата для очистки");
+        return;
+      }
+      setIsLoading(true);
 
-    setIsLoading(true);
+      // Получаем chatKey из store для optimistic update
+      const { chatsByKey } = useChatListStore.getState();
+      const resolvedChatKey =
+        chatKey ?? Object.keys(chatsByKey).find((key) => chatsByKey[key].id === chatId);
 
-    try {
-      const result = await clearChat({ index: targetId });
+      try {
+        if (forAll && resolvedChatKey) {
+          await clearChatForAll(resolvedChatKey);
+        } else {
+          // API запрос на очистку только для себя
+          await clearChatForMe({ index: chatId });
+        }
 
-      if (result.success) {
-        const { chatsByKey, patchChat } = useChatListStore.getState();
-
-        // Находим ключ чата для обновления в списке слева
-        const chatKey = Object.keys(chatsByKey).find(
-          (key) => (chatsByKey[key] as unknown as Record<string, unknown>).id === targetId,
-        );
-
-        if (chatKey && patchChat) {
-          patchChat(chatKey, {
+        // Optimistic update - мгновенное обновление UI
+        if (resolvedChatKey) {
+          useChatListStore.getState().patchChat(resolvedChatKey, {
             lastMessage: null,
             unreadMessages: 0,
             unreadFiles: 0,
           });
         }
 
-        // Очищаем текущее окно сообщений
+        // Очищаем сообщения в открытом окне чата
         clearMessages();
 
-        // Обновляем данные в React Query
-        await queryClient.invalidateQueries({ queryKey: ["chats"] });
-        await queryClient.invalidateQueries({ queryKey: ["messages", targetId] });
+        // Invalidate для фоновой перезагрузки (гарантия актуальности)
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
+        queryClient.invalidateQueries({ queryKey: ["messages", targetId] });
 
+        // Закрываем модалку и показываем успех
         closeModal();
         showToast(toastMessage, {
           mobile: "/icons/toast/checkMobile.svg",
           desktop: "/icons/toast/checkDesktop.svg",
         });
+      } catch (error) {
+        console.error("Ошибка при очистке чата:", error);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error("Ошибка при очистке чата:", error);
-    } finally {
-      setIsLoading(false);
-    }
-    // Включаем зависимости, которые реально используются, чтобы линтер был доволен и логика работала
-  }, [chatId, clearMessages, closeModal, queryClient, showToast, toastMessage]);
+    },
+    [closeModal, showToast, toastMessage, clearMessages, chatId, chatKey, queryClient],
+  );
 
   return {
     isLoading,

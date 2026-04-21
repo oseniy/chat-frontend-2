@@ -2,7 +2,7 @@ import { WSBaseResponse } from "@/shared/api/ws/model/types";
 import { sendWSRequest } from "@/shared/api/ws/wsClient";
 import { WS_ACTIONS } from "@/shared/constants/constants";
 
-export type LeaveChatResponse = WSBaseResponse<{
+type LeaveChatResponse = WSBaseResponse<{
   chat_key: string;
 }>;
 

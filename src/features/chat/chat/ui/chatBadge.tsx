@@ -1,11 +1,11 @@
 import { cn } from "@/shared/shadcn/lib/utils";
 
-type DateBadgeProps = {
+type ChatBadgeProps = {
   className?: string;
   label: string;
 };
 
-export const DateBadge: React.FC<DateBadgeProps> = ({ label, className }) => {
+export const ChatBadge: React.FC<ChatBadgeProps> = ({ label, className }) => {
   return (
     <div
       className={cn(
