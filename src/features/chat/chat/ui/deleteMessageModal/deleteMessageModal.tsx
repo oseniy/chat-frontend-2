@@ -51,8 +51,10 @@ export const DeleteMessageModal: React.FC<DeleteMessageModalProps> = ({
       ? [messageId]
       : [];
 
-  const firstMessage = messages.find((msg) => msg.uid === messageIds[0]);
-  const isAvailableToDelete = firstMessage && currentUserId === firstMessage.fromUser.uid;
+  const selectedMessages = messages.filter((msg) => messageIds.includes(msg.uid));
+  const isAvailableToDelete =
+    selectedMessages.length > 0 &&
+    selectedMessages.every((msg) => currentUserId === msg.fromUser.uid);
 
   const name =
     chatType === "chat" && chatKeyUser
@@ -68,7 +70,7 @@ export const DeleteMessageModal: React.FC<DeleteMessageModalProps> = ({
       chatKey,
       chatType: chatType as ChatType,
       chatKeyUser,
-      forAll: isChecked,
+      forAll: isAvailableToDelete && isChecked,
     });
   };
 
