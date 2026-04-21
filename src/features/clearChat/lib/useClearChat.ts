@@ -23,8 +23,9 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
 
   // Добавляем методы очистки медиа и файлов из стора
   const clearMessages = useChatStore((s) => s.clearMessages);
-  const clearMedia = useChatStore((s) => s.clearMedia);
-  const clearFiles = useChatStore((s) => s.clearFiles);
+  //закомментировал, может сделаем позже
+  // const clearMedia = useChatStore((s) => s.clearMedia);
+  // const clearFiles = useChatStore((s) => s.clearFiles);
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -61,10 +62,10 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
         });
       }
 
-      // 3. Очищаем сообщения, медиа и файлы в сторе мгновенно
-      clearMessages();
-      clearMedia();
-      clearFiles();
+      // // 3. Очищаем сообщения, медиа и файлы в сторе мгновенно
+      // clearMessages();
+      // clearMedia();
+      // clearFiles();
 
       // 4. Invalidate для фоновой перезагрузки
       queryClient.invalidateQueries({ queryKey: ["chats"] });
@@ -80,16 +81,7 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
     } finally {
       setIsLoading(false);
     }
-  }, [
-    closeModal,
-    showToast,
-    toastMessage,
-    clearMessages,
-    clearMedia,
-    clearFiles,
-    chatId,
-    queryClient,
-  ]);
+  }, [closeModal, showToast, toastMessage, clearMessages, chatId, queryClient]);
 
   return {
     isLoading,

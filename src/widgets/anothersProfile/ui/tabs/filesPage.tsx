@@ -13,7 +13,7 @@ type FilesPageProps = {
 export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
   const files = useChatStore((state) => state.files);
   const fetchFiles = useChatStore((state) => state.fetchFiles);
-  const clearFiles = useChatStore((state) => state.clearFiles); // Добавили метод очистки
+  const clearFiles = useChatStore((state) => state.clearFiles);
   const chatKey = useChatStore((state) => state.chatKey);
   const isLoading = useChatStore((state) => state.isLoadingFiles);
 
@@ -21,12 +21,36 @@ export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
     if (chatKey) {
       fetchFiles(chatKey);
     }
-
-    // Очистка при размонтировании компонента (уходе со страницы файлов)
     return () => {
       clearFiles();
     };
   }, [chatKey, fetchFiles, clearFiles]);
+
+  // Функция для принудительного скачивания
+  const handleDownload = async (e: React.MouseEvent, url: string, fileName: string) => {
+    e.preventDefault(); // Предотвращаем переход по ссылке
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Сетевая ошибка при скачивании");
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName; // Имя файла, которое увидит пользователь
+      document.body.appendChild(link);
+      link.click();
+
+      // Чистим память
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Ошибка при скачивании файла:", error);
+      // Здесь можно добавить showToast с ошибкой
+    }
+  };
 
   if (isLoading && files.length === 0) {
     return <div className="text-muted-foreground p-10 text-center text-sm">Загрузка...</div>;
@@ -36,12 +60,9 @@ export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
     <div className={cn("flex flex-1 flex-col overflow-y-auto", className)}>
       {files.map((file, index) => (
         <React.Fragment key={file.uid}>
-          <a
-            href={file.fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            download
-            className="group flex cursor-pointer items-center gap-3 p-4 transition-colors"
+          <div
+            onClick={(e) => handleDownload(e, file.fileUrl || "", file.name || "file")}
+            className="group flex cursor-pointer items-center gap-3 p-4 transition-colors hover:bg-black/5"
           >
             {/* иконка */}
             <div className="bg-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white">
@@ -57,7 +78,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
                 {formatBytes(file.size || 0)} • {formatDate(file.createdAt)}
               </p>
             </div>
-          </a>
+          </div>
 
           {/* Разделительная линия */}
           {index < files.length - 1 && <div className="mx-4 border-b border-black/30" />}
