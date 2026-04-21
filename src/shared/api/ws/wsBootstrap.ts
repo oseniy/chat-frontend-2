@@ -1,5 +1,6 @@
 import { handleEditChat } from "@/entities/chat/api/ws/editChatHandler";
 import { handleNewStatusUser } from "@/entities/user/api/ws/newStatusUserHandler";
+import { bootstrapCallWSHandlers } from "@/features/call/api/callWsHandlers";
 import {
   handleCreateTextMessage,
   handleDeleteMessage,
@@ -43,4 +44,6 @@ export const bootstrapWSHandlers = () => {
   registerWSHandler(WS_ACTIONS.CLEAR_GROUP_MESSAGES, handleClearGroupMessages);
 
   registerWSHandler(WS_ACTIONS.NEW_STATUS_USER, handleNewStatusUser);
+
+  bootstrapCallWSHandlers();
 };

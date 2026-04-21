@@ -1,4 +1,5 @@
 import { GlobalModal } from "@/entities/modals/ui/globalModal";
+import { CallManager } from "@/features/call";
 import { MediaViewerContainer } from "@/features/mediaViewer/ui/mediaViewerContainer";
 import { ResponsiveLayout } from "@/shared/layouts/responsiveLayout";
 import { NavBar } from "@/shared/navBar/ui/navBar";
@@ -16,6 +17,7 @@ export default function ChatLayout({ children, sidebar, extra }: ChatLayoutProps
   return (
     <QueryCustomProvider>
       <GlobalModal />
+      <CallManager />
       <MediaViewerContainer />
       <ContextMenuProvider>
         <ToastProvider>
