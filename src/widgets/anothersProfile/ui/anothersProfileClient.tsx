@@ -7,6 +7,7 @@ import { ChatTypeLight } from "@/entities/chat/model/types";
 import { ContactListResponse } from "@/entities/contact/model/types";
 import { User } from "@/entities/user/model/types";
 import { useUserInfoStore } from "@/entities/user/model/useUserInfoStore";
+import { useChatListStore } from "@/features/chatList/model/useChatListStore";
 import { useIsMobileStore } from "@/shared/model/isMobile.store";
 import { SidebarHeader } from "@/shared/ui/sidebarHeader/sidebarHeader";
 
@@ -14,7 +15,7 @@ import { getProfileHeaderText } from "../lib/getProfileHeaderText";
 import { useAnothersProfileContextMenu } from "../lib/useAnothersProfileContextMenu";
 import { useProfileClose } from "../lib/useProfileClose";
 import { useAnothersProfileUIStore } from "../model/anothersProfileUIStore";
-import { AnothersProfile } from "./anothersProfile";
+import { AnothersProfile } from "./sections/anothersProfile";
 import { FilesPage } from "./tabs/filesPage";
 import { LinksPage } from "./tabs/linksPage";
 import { MediaPage } from "./tabs/mediaPage";
@@ -24,23 +25,25 @@ type AnothersProfileClientProps = {
   chatType: ChatTypeLight;
   chatInfo: User | null;
   contacts: ContactListResponse | null;
+  chatKey?: string;
 };
 
 export const AnothersProfileClient: React.FC<AnothersProfileClientProps> = ({
   chatType,
   chatInfo,
   contacts,
+  chatKey: chatKeyProp,
 }) => {
-  const { isMainActive, activeSection, setActiveSection, resetTabsUI } = useAnothersProfileUIStore(
+  const { activeSection, activeTab, setActiveTab, resetTabsUI } = useAnothersProfileUIStore(
     useShallow((s) => ({
-      isMainActive: s.isMainActive,
       activeSection: s.activeSection,
-      setActiveSection: s.setActiveSection,
+      activeTab: s.activeTab,
+      setActiveTab: s.setActiveTab,
       resetTabsUI: s.reset,
     })),
   );
   const isMobile = useIsMobileStore((state) => state.isMobile);
-  const sidebarHeaderText = getProfileHeaderText({ chatType, isMainActive, activeSection });
+  const sidebarHeaderText = getProfileHeaderText({ chatType, activeSection, activeTab });
   const closeProfile = useProfileClose();
 
   const cachedUserInfo = useUserInfoStore((s) =>
@@ -51,19 +54,34 @@ export const AnothersProfileClient: React.FC<AnothersProfileClientProps> = ({
     if (chatInfo) {
       useUserInfoStore.getState().setUserInfo(chatInfo.uid, chatInfo);
     }
-    setActiveSection("media");
+    setActiveTab("media");
     return () => resetTabsUI();
-  }, [chatInfo]);
+  }, [chatInfo, setActiveTab, resetTabsUI]);
 
   const displayData = cachedUserInfo ?? chatInfo;
 
+  const finalChatId = useChatListStore((s) => {
+    if (!chatKeyProp) return null;
+    const cleanUid = chatKeyProp.replace("user_", "");
+
+    const chatEntry = Object.values(s.chatsByKey).find((c) => {
+      const data = c as unknown as Record<string, unknown>;
+      const innerChat = data.chat as Record<string, unknown> | undefined;
+      return (
+        data.chat_key === cleanUid || data.chat_key === chatKeyProp || innerChat?.uid === cleanUid
+      );
+    }) as unknown as Record<string, unknown>;
+
+    return (chatEntry?.id || chatEntry?.index) as number | null;
+  });
+
   const contextMenu = useAnothersProfileContextMenu({
-    chatId: displayData?.id || null,
+    chatId: typeof finalChatId === "number" ? finalChatId : null,
     chatName: displayData?.fullName ?? "",
   });
 
   const tabs: Record<string, React.ReactNode> = {
-    media: <MediaPage />,
+    media: <MediaPage chatKey={chatKeyProp} />,
     files: <FilesPage />,
     voices: <VoicesPage />,
     links: <LinksPage />,
@@ -77,20 +95,21 @@ export const AnothersProfileClient: React.FC<AnothersProfileClientProps> = ({
     <>
       <SidebarHeader
         title={sidebarHeaderText}
-        closeButton={!isMobile && isMainActive}
+        closeButton={!isMobile && activeSection === "main"}
         closeButtonFn={closeProfile}
         backButtonFn={closeProfile}
-        backButton={isMobile || !isMainActive}
+        backButton={isMobile || !(activeSection === "main")}
         contextMenu={contextMenu}
       />
-      {isMainActive ? (
+      {activeSection === "main" ? (
         <AnothersProfile
           initialData={displayData}
           contactsInitialData={contacts}
           isMobile={isMobile}
+          chatKey={chatKeyProp}
         />
       ) : (
-        tabs[activeSection] || <LinksPage />
+        tabs[activeTab] || <LinksPage />
       )}
     </>
   );

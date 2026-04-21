@@ -4,6 +4,7 @@ import { cn } from "@/shared/shadcn/lib/utils";
 import { InfoItem } from "@/shared/ui/infoItems/infoItem";
 import { useInviteLink } from "@/widgets/anothersProfile/lib/useInviteLink";
 
+import { getChatTypeLight } from "../lib/getChatTypeLight";
 import { MappedChatDetails } from "../lib/mapChat";
 
 type ChatInfoListProps = {
@@ -16,25 +17,37 @@ export const ChatInfoList = ({ className, initialData, isOwner }: ChatInfoListPr
   const description = initialData?.description;
 
   const { data, isLoading, isError } = useInviteLink(isOwner ? initialData?.chatKey : undefined);
+  const chatTypeLight = getChatTypeLight(initialData?.chatKey ?? "");
+  const title =
+    chatTypeLight == "channel" ? "Ссылка на приглашение в канал" : "Ссылка на приглашение в группу";
+  const fullInviteLink = (() => {
+    if (!data?.invite_link) return undefined;
+    const tokenMatch = data.invite_link.match(/[?&]token=([^\s&]+)/);
+    const token = tokenMatch?.[1];
+    if (!token || !data.chat_key) return data.invite_link;
+    return `${process.env.NEXT_PUBLIC_APP_URL}/chats/${data.chat_key}?token=${token}`;
+  })();
 
   const inviteLink = isLoading
     ? "..."
     : isError
-      ? "ошибка генерации пригласительной ссылки"
-      : data?.invite_link;
+      ? "Ошибка генерации пригласительной ссылки"
+      : fullInviteLink;
 
-  const hasInviteLink = !!data?.invite_link;
+  const hasInviteLink = !!fullInviteLink;
 
   return (
     <div className="flex w-full flex-col gap-2">
       <div className={cn("flex w-full flex-col rounded-lg bg-white", className)}>
-        {description && <InfoItem title="Описание" text={description} className="text-black" />}
+        {description && description.trim() !== "" && (
+          <InfoItem title="Описание" text={description} className="text-black" />
+        )}
       </div>
       {isOwner && (
         <div className={cn("flex w-full flex-col rounded-lg bg-white", className)}>
           <InfoItem
             copy
-            title="ссылка на приглашение"
+            title={title}
             text={inviteLink}
             className={cn(hasInviteLink ? "text-primary" : "text-black")}
           />

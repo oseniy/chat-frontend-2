@@ -1,39 +1,39 @@
 import { notFound } from "next/navigation";
 
 import { getChatServer } from "@/entities/chat/api/getChatServer";
-import { getMessages } from "@/entities/chat/api/getMessages";
-import { mapChatMessages } from "@/features/chat/chat/model/mapper";
-import { getChatType } from "@/shared/lib/getChatType";
+import { getChatTypeLight } from "@/entities/chat/lib/getChatTypeLight";
+import { getInitialJoin } from "@/entities/chat/lib/getInitialJoin";
+import { ChatInviteJoinView } from "@/features/joinToChat/ui/chatInviteJoinView";
 import { ChatWidget } from "@/widgets/chat/chatWidget/chatWidget";
 
 type ChatPageProps = {
   params: Promise<{ chatKey: string }>;
+  searchParams: Promise<{ token?: string }>;
 };
 
-export default async function ChatPage({ params }: ChatPageProps) {
+export default async function ChatPage({ params, searchParams }: ChatPageProps) {
   const { chatKey } = await params;
+  const { token } = await searchParams;
 
-  const chatInfo = await getChatServer(chatKey, getChatType(chatKey));
+  const chatInfo = await getChatServer(chatKey, getChatTypeLight(chatKey));
 
-  if (!chatInfo?.success) return notFound();
+  if (!chatInfo?.success) {
+    if (token) {
+      return <ChatInviteJoinView chatKey={chatKey} token={token} />;
+    }
+    return notFound();
+  }
 
-  const messagesResult = await getMessages({
-    uid: chatInfo.data.uid,
-    page: 1,
-    page_size: 50,
-    ordering: "-created_at",
-  });
+  const initialJoin = await getInitialJoin(chatInfo.data);
 
-  console.log("messagesResult", messagesResult);
-  const messages = messagesResult.success ? mapChatMessages(messagesResult.data.results) : [];
   return (
     <>
       <ChatWidget
         chatKey={chatKey}
         chatType={chatInfo.type}
-        chatKeyUser={messages[0]?.chatKey || null}
+        chatUid={chatInfo.data.uid}
         initialChatInfo={chatInfo.data}
-        initialMessages={messages}
+        initialJoin={initialJoin}
       />
     </>
   );

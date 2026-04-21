@@ -70,7 +70,7 @@ export const MediaViewer = () => {
           )}
 
           {media.fileType?.startsWith("video") && (
-            <video src={media.fileUrl} controls autoPlay className="max-h-[80vh]" />
+            <video src={media.fileUrl} controls autoPlay className="h-full w-full object-cover" />
           )}
         </div>
       </div>
@@ -86,8 +86,8 @@ export const MediaViewer = () => {
           message="Файл успешно скачан"
           onClose={() => setIsToastOpen(false)}
           icon={{
-            mobile: "@icons/sendFiles/downloaded.svg",
-            desktop: "shared/ui/icons/sendFiles/downloaded.svg",
+            mobile: "/download.svg",
+            desktop: "/download.svg",
           }}
         />
       )}

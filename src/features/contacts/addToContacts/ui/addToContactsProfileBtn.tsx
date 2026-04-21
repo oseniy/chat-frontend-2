@@ -19,7 +19,7 @@ export const AddToContactsProfileBtn: React.FC<AddToContactsProfileBtnProps> = (
   lastName,
   onSuccess,
 }) => {
-  const { mutate } = useAddToContacts();
+  const { mutate, isPending } = useAddToContacts();
 
   const handleAddToContacts = () => {
     mutate(
@@ -38,6 +38,7 @@ export const AddToContactsProfileBtn: React.FC<AddToContactsProfileBtnProps> = (
       size="icon-auto"
       className="text-primary hover:text-primary-secondary smooth"
       onClick={handleAddToContacts}
+      disabled={isPending}
     >
       <PlusInCircle className="h-5 w-5" />
       <p className="subtext">Добавить в контакты</p>

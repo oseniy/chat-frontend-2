@@ -16,15 +16,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   isInitialized: false,
   setAccessToken: (token) => {
     set({ accessToken: token });
-    saveTokenToCookie(token).catch((err) => {
-      console.error("Failed to sync token with cookies", err);
-    });
+    // Если мы успешно залогинились (нормально), снимаем флаг выхода
+    localStorage.removeItem("isLoggedOut");
+    saveTokenToCookie(token).catch(() => {});
   },
   clearAccessToken: () => {
     set({ accessToken: null });
-    saveTokenToCookie(null).catch((err) => {
-      console.error("Failed to delete token from cookies", err);
-    });
+    saveTokenToCookie(null).catch(() => {});
   },
-  finishInitialization: () => set({ isInitialized: true }),
+  finishInitialization: () => {
+    // ПРОВЕРКА: если в localStorage висит флаг выхода,
+    // значит мы выходили в офлайне. Стираем токен, который мог прийти из кук.
+    if (localStorage.getItem("isLoggedOut") === "true") {
+      set({ accessToken: null });
+    }
+    set({ isInitialized: true });
+  },
 }));

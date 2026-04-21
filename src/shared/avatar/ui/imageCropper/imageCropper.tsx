@@ -23,9 +23,6 @@ export const ImageCropper = ({ src, onConfirm }: Props) => {
   }, []);
 
   const handleConfirm = async () => {
-    console.log("handleConfirm");
-    console.log("area:", area);
-
     if (!area) return;
     const img = await getCroppedImg(src, area);
     onConfirm(img);

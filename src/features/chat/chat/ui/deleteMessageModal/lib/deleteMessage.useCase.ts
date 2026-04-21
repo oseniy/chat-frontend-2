@@ -8,6 +8,9 @@ type DeleteMessageParams = {
   messageId: string;
   chatKey: string;
   chatType: ChatType;
+  fromUserId: string;
+  toUserId?: string;
+  lastMessageId?: string;
   chatKeyUser?: string | null;
   forAll: boolean;
 };
@@ -20,7 +23,6 @@ export const deleteMessageUseCase = async ({
   forAll,
 }: DeleteMessageParams) => {
   const { deleteMessage } = useChatStore.getState();
-
   deleteMessage(messageId);
 
   try {

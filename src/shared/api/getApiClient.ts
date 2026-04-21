@@ -1,7 +1,6 @@
 import axios, { AxiosError, AxiosHeaders, InternalAxiosRequestConfig } from "axios";
 
 import { API_CONFIG } from "./base";
-import { logout } from "./logout";
 import { useAuthStore } from "./store";
 
 interface CustomConfig extends InternalAxiosRequestConfig {
@@ -95,6 +94,7 @@ getApiClient.interceptors.response.use(
       config.headers?.set("Authorization", `Bearer ${newAccessToken}`);
       return getApiClient(config);
     } catch (err) {
+      const { logout } = await import("./logout");
       logout();
       window.location.href = "/auth";
       processQueue(err as Error, null);

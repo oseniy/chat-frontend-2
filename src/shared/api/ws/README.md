@@ -55,7 +55,6 @@ const sendMessage = async (chatKey: string, text: string) => {
       chat_key: chatKey,
       text: text,
     });
-    console.log("Сообщение доставлено:", response);
   } catch (error) {
     console.error("Ошибка отправки (или очередь полна):", error);
   }
@@ -72,9 +71,7 @@ import { WSHandler } from "@/shared/api/ws/model/types";
 
 // Внутри useEffect компонента или хука
 useEffect(() => {
-  const handler: WSHandler<NewMessagePayload> = (data) => {
-    console.log("Пришло новое сообщение:", data.object);
-  };
+  const handler: WSHandler<NewMessagePayload> = (data) => {};
 
   // Регистрируем обработчик для конкретного action
   const unsubscribe = registerWSHandler("new_message", handler);

@@ -1,4 +1,4 @@
-import { ChatType } from "@/features/createChat/model/types";
+import { ChatType } from "@/features/chat/chat/model/types/serverTypes";
 
 import { ChatDetails } from "../model/schema";
 

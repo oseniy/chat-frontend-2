@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect } from "react";
 import { useShallow } from "zustand/react/shallow";
 
@@ -14,7 +15,14 @@ import { getProfileHeaderText } from "../lib/getProfileHeaderText";
 import { useChatProfileContextMenu } from "../lib/useChatProfileContextMenu";
 import { useProfileClose } from "../lib/useProfileClose";
 import { useAnothersProfileUIStore } from "../model/anothersProfileUIStore";
-import { ChatProfile } from "./chatProfile";
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const ChatProfile = dynamic(
+  () => import("./sections/chatProfile").then((m) => ({ default: m.ChatProfile })),
+  { ssr: false },
+);
+import { ChatSettingsPage } from "./sections/chatSettingsPage";
+import { InvitePage } from "./sections/invitePage";
 import { FilesPage } from "./tabs/filesPage";
 import { LinksPage } from "./tabs/linksPage";
 import { MediaPage } from "./tabs/mediaPage";
@@ -34,30 +42,34 @@ export const ChatProfileClient: React.FC<ChatProfileClientProps> = ({
   chatInfo,
   initialParticipants,
 }) => {
-  const { isMainActive, activeSection, setActiveSection, resetTabsUI } = useAnothersProfileUIStore(
-    useShallow((s) => ({
-      isMainActive: s.isMainActive,
-      activeSection: s.activeSection,
-      setActiveSection: s.setActiveSection,
-      resetTabsUI: s.reset,
-    })),
-  );
+  const { activeSection, activeTab, setActiveTab, resetTabsUI, setActiveSection } =
+    useAnothersProfileUIStore(
+      useShallow((s) => ({
+        activeSection: s.activeSection,
+        activeTab: s.activeTab,
+        setActiveTab: s.setActiveTab,
+        resetTabsUI: s.reset,
+        setActiveSection: s.setActiveSection,
+      })),
+    );
   const isMobile = useIsMobileStore((state) => state.isMobile);
-  const sidebarHeaderText = getProfileHeaderText({ chatType, isMainActive, activeSection });
+  const sidebarHeaderText = getProfileHeaderText({ chatType, activeSection, activeTab });
   const closeProfile = useProfileClose();
   const currentUserUid = useUserStore((s) => s.userId);
   const cachedChatInfo = useChatInfoStore((s) => s.chatInfoByKey[chatKey]);
+
   useEffect(() => {
-    if (chatInfo) {
+    if (chatInfo && !useChatInfoStore.getState().chatInfoByKey[chatKey]) {
       useChatInfoStore.getState().setChatInfo(chatKey, chatInfo);
     }
-    setActiveSection("participants");
+    setActiveTab("participants");
     return () => resetTabsUI();
   }, [chatKey, chatInfo]);
 
   const displayData = cachedChatInfo ?? chatInfo;
 
   const isOwner = currentUserUid === displayData?.createdBy;
+
   const contextMenu = useChatProfileContextMenu({
     isOwner,
     chatType,
@@ -67,14 +79,6 @@ export const ChatProfileClient: React.FC<ChatProfileClientProps> = ({
     chatId: displayData?.id || null,
   });
 
-  const tabs: Record<string, React.ReactNode> = {
-    participants: <ParticipantsPage initialParticipants={initialParticipants} chatKey={chatKey} />,
-    media: <MediaPage />,
-    files: <FilesPage />,
-    voices: <VoicesPage />,
-    links: <LinksPage />,
-  };
-
   if (!displayData) {
     return <div>Ошибка загрузки профиля</div>;
   }
@@ -83,22 +87,54 @@ export const ChatProfileClient: React.FC<ChatProfileClientProps> = ({
     <>
       <SidebarHeader
         title={sidebarHeaderText}
-        closeButton={!isMobile && isMainActive}
+        closeButton={!isMobile && activeSection === "main"}
         closeButtonFn={closeProfile}
         backButtonFn={closeProfile}
-        backButton={isMobile || !isMainActive}
+        backButton={isMobile || !(activeSection === "main")}
         contextMenu={contextMenu}
+        settings={isOwner}
+        onSettingsClick={() => {
+          setActiveSection("settings");
+        }}
       />
-      {isMainActive ? (
+      {activeSection === "main" ? (
         <ChatProfile
           initialData={displayData}
           isMobile={isMobile}
           isOwner={isOwner}
           chatKey={chatKey}
           initialParticipants={initialParticipants}
+          canInvite={isOwner}
         />
+      ) : activeSection === "settings" ? (
+        <ChatSettingsPage chatKey={chatKey} chatInfo={displayData} />
+      ) : activeSection === "invite" ? (
+        <InvitePage chatKey={chatKey} />
       ) : (
-        tabs[activeSection] || <LinksPage />
+        (() => {
+          switch (activeTab) {
+            case "participants":
+              return (
+                <ParticipantsPage
+                  chatType={chatType}
+                  initialParticipants={initialParticipants}
+                  chatKey={chatKey}
+                  canInvite={isOwner}
+                  isOwner={isOwner}
+                />
+              );
+            case "media":
+              return <MediaPage />;
+            case "files":
+              return <FilesPage />;
+            case "voices":
+              return <VoicesPage />;
+            case "links":
+              return <LinksPage />;
+            default:
+              return <MediaPage />;
+          }
+        })()
       )}
     </>
   );

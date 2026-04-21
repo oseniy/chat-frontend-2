@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 
 import { updateProfile } from "@/entities/user/api/updateProfile";
+import { saveIsFilledToCookie } from "@/shared/api/actions/saveIsFilledToCookie";
 import { FormInput } from "@/shared/form/ui/formInput";
 import { cn } from "@/shared/shadcn/lib/utils";
 import { Button } from "@/shared/shadcn/ui/button";
@@ -52,8 +53,7 @@ export const UserForm: React.FC<UserFormProps> = ({ className }) => {
 
     setUser(data);
     reset();
-    /* eslint-disable-next-line */
-    document.cookie = "is_filled=true; path=/";
+    await saveIsFilledToCookie(true);
     router.push("/auth/success");
   };
 
@@ -69,7 +69,18 @@ export const UserForm: React.FC<UserFormProps> = ({ className }) => {
               id="firstName"
               label="Введите имя"
               error={errors.firstName?.message}
-              {...register("firstName")}
+              {...register("firstName", {
+                onChange: (e) => {
+                  let value = e.target.value;
+
+                  value = value
+                    .replace(/\s*-\s*/g, "-")
+                    .replace(/\s{2,}/g, " ")
+                    .replace(/^\s+/, "");
+
+                  e.target.value = value;
+                },
+              })}
             />
 
             <NicknameInput name="nickname" />

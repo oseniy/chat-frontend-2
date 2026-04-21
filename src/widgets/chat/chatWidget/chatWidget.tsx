@@ -1,14 +1,19 @@
 "use client";
+
+import { useEffect } from "react";
+
 import { useCallStore } from "@/entities/call/model/useCallStore";
 import { MappedChatDetails } from "@/entities/chat/lib/mapChat";
+import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
 import { UserPreview } from "@/entities/user/model/types";
+import { useUserStore } from "@/entities/user/model/userStore";
 import { normalizeChatInfo } from "@/features/chat/chat/lib/normalizeChatInfo";
 import { ChatType } from "@/features/chat/chat/model/types/serverTypes";
 import { cn } from "@/shared/shadcn/lib/utils";
 
-import { MappedChatMessage } from "../../../features/chat/chat/model/types/mappedTypes";
 import { Chat } from "../../../features/chat/chat/ui/chat";
 import { ChatHeader } from "../chatHeader/ui/chatHeader";
+import { getIsJoin } from "./lib/getIsJoin";
 
 interface ChatWithParticipants {
   uid?: string;
@@ -18,33 +23,40 @@ interface ChatWithParticipants {
 type ChatWidgetProps = {
   className?: string;
   chatKey: string;
-  chatKeyUser: string | null;
   chatType: ChatType;
   initialChatInfo: MappedChatDetails | UserPreview;
-  initialMessages: MappedChatMessage[];
+  chatUid: string;
+  initialJoin?: boolean;
 };
 
 export const ChatWidget: React.FC<ChatWidgetProps> = ({
   className,
   initialChatInfo,
   chatType,
-  initialMessages,
   chatKey,
-  chatKeyUser,
+  chatUid,
+  initialJoin = false,
 }) => {
   const makeCall = useCallStore((state) => state.makeCall);
-  const chatInfo = normalizeChatInfo(initialChatInfo);
+  const storedChatInfo = useChatInfoStore((s) => s.chatInfoByKey[chatKey]);
+  const userId = useUserStore((s) => s.userId);
+  const join = userId !== null ? getIsJoin(storedChatInfo ?? initialChatInfo, userId) : initialJoin;
+  const setChatInfo = useChatInfoStore((s) => s.setChatInfo);
 
+  // Инициализируем стор начальными данными (только для групп/каналов)
+  useEffect(() => {
+    if ("type" in initialChatInfo) {
+      setChatInfo(chatKey, initialChatInfo);
+    }
+  }, [chatKey, initialChatInfo, setChatInfo]);
+
+  // Используем данные из стора, если есть, иначе из пропсов
+  const chatInfo = normalizeChatInfo(storedChatInfo ?? initialChatInfo);
   const handleCall = () => {
     const chatData = initialChatInfo as ChatWithParticipants;
-    const participants = Array.isArray(chatData?.participants) ? chatData.participants : [];
-    const pUid = participants.find((p) => p.uid && !p.uid.startsWith("chat_"))?.uid;
 
     // Приоритет: chatKeyUser -> участник -> прямой uid
-    const targetUserId =
-      (chatKeyUser && !chatKeyUser.startsWith("chat_") ? chatKeyUser : null) ||
-      pUid ||
-      (chatData?.uid && !chatData.uid.startsWith("chat_") ? chatData.uid : null);
+    const targetUserId = chatType == "chat" ? chatKey : null;
 
     if (targetUserId) {
       console.warn("📞 Звоним на UID:", targetUserId);
@@ -65,18 +77,18 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
           wasOnlineAt: chatInfo.wasOnlineAt,
           isOnline: chatInfo.isOnline,
           membersCount: chatInfo.membersCount,
+          chatUid: chatUid,
           chatType: chatType,
         }}
         onCallClick={handleCall}
-        onSearchClick={() => {}}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Chat
-          initialMessages={initialMessages}
           chatKey={chatKey}
           chatType={chatType}
-          chatKeyUser={chatKeyUser}
           createdBy={chatInfo.createdBy}
+          join={join}
+          chatUid={chatUid}
         />
       </div>
     </div>

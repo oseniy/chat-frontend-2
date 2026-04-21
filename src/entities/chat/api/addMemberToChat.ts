@@ -30,7 +30,6 @@ export const addMembersToChat = async (
       uid_users_list: payload.uid_users_list,
     },
   };
-
   const response = await sendWSRequest<{
     request_uid: string;
     status: "OK" | "error";

@@ -1,5 +1,6 @@
+import { ChatType } from "@/entities/chat/model/types";
 import { useChatStore } from "@/entities/chat/model/useChatStore";
-import { ChatType } from "@/features/createChat/model/types";
+import { useChatListStore } from "@/features/chatList/model/useChatListStore";
 
 import { deleteMessageUseCase } from "./deleteMessage.useCase";
 
@@ -19,7 +20,7 @@ export const deleteMessagesBulkUseCase = async ({
   forAll,
 }: DeleteMessagesBulkParams) => {
   const { messages, currentUserId } = useChatStore.getState();
-
+  const { chatsByKey } = useChatListStore.getState();
   const messagesMap = new Map(messages.map((m) => [m.uid, m]));
 
   await Promise.all(
@@ -32,6 +33,9 @@ export const deleteMessagesBulkUseCase = async ({
       return deleteMessageUseCase({
         messageId: id,
         chatKey,
+        fromUserId: msg.fromUser.uid,
+        toUserId: msg.toUser?.uid,
+        lastMessageId: chatsByKey[chatKey]?.lastMessage?.uid,
         chatType,
         chatKeyUser,
         forAll: forAll && canForAll,

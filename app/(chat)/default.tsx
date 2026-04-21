@@ -1,9 +1,8 @@
 import { headers } from "next/headers";
 
 import { getChatServer } from "@/entities/chat/api/getChatServer";
-import { getMessages } from "@/entities/chat/api/getMessages";
-import { mapChatMessages } from "@/features/chat/chat/model/mapper";
-import { getChatType } from "@/shared/lib/getChatType";
+import { getChatTypeLight } from "@/entities/chat/lib/getChatTypeLight";
+import { getInitialJoin } from "@/entities/chat/lib/getInitialJoin";
 import { ChatWidget } from "@/widgets/chat/chatWidget/chatWidget";
 
 const extractChatKey = (pathname: string): string | null => {
@@ -24,7 +23,7 @@ export default async function ChatsPage() {
     );
   }
 
-  const chatInfo = await getChatServer(chatKey, getChatType(chatKey));
+  const chatInfo = await getChatServer(chatKey, getChatTypeLight(chatKey));
 
   if (!chatInfo?.success) {
     return (
@@ -34,22 +33,15 @@ export default async function ChatsPage() {
     );
   }
 
-  const messagesResult = await getMessages({
-    uid: chatInfo.data.uid,
-    page: 1,
-    page_size: 50,
-    ordering: "-created_at",
-  });
-
-  const messages = messagesResult.success ? mapChatMessages(messagesResult.data.results) : [];
+  const initialJoin = await getInitialJoin(chatInfo.data);
 
   return (
     <ChatWidget
       chatKey={chatKey}
       chatType={chatInfo.type}
-      chatKeyUser={messages[0]?.chatKey || null}
       initialChatInfo={chatInfo.data}
-      initialMessages={messages}
+      initialJoin={initialJoin}
+      chatUid={chatInfo.data.uid}
     />
   );
 }

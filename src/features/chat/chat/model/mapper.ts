@@ -32,14 +32,18 @@ export const mapMessageFile = (file: MessageFile): MappedMessageFile => ({
   id: file.id,
   uid: file.uid,
   file: file.file,
-  fileUrl: file.file_url.includes("https://")
-    ? file.file_url
-    : `${process.env.NEXT_PUBLIC_API_URL}/${file.file_url}`,
+  fileUrl:
+    file.file_url === ""
+      ? "/icons/imageLoader.svg"
+      : file.file_url.includes("https://")
+        ? file.file_url
+        : `${process.env.NEXT_PUBLIC_API_URL}/${file.file_url}`,
   fileWebp: file.file_webp ?? null,
   fileWebpUrl: file.file_webp_url,
   fileType: file.file_type ?? null,
   isNew: file.new,
   createdAt: file.created_at,
+  name: file.name ?? "",
   updatedAt: file.updated_at,
 });
 
@@ -67,19 +71,15 @@ export const mapForwardedMessage = (message: ForwardedMessage): MappedForwardedM
 };
 
 export const mapChatMessage = (message: ChatMessage | ChatMessageUI): MappedChatMessage => {
-  const messageUI = {
-    id: message.id,
+  const mappedMessage: MappedChatMessage = {
+    id: message.id || 0,
     uid: message.uid,
     fromUser: mapUserProfile(message.from_user),
     toUser: message.to_user ? mapUserProfile(message.to_user) : null,
     content: message.content,
-    repliedMessages: message.replied_messages
-      ? message.replied_messages.map(mapRepliedMessage)
-      : [],
-    forwardedMessages: message.forwarded_messages
-      ? message.forwarded_messages.map(mapForwardedMessage)
-      : [],
-    filesList: message.files_list ? message.files_list.map(mapMessageFile) : [],
+    repliedMessages: message.replied_messages?.map(mapRepliedMessage) || [],
+    forwardedMessages: [],
+    filesList: message.files_list?.map(mapMessageFile) || [],
     isNew: message.new,
     createdAt: message.created_at,
     updatedAt: message.updated_at,
@@ -89,12 +89,36 @@ export const mapChatMessage = (message: ChatMessage | ChatMessageUI): MappedChat
     messageRtc: message.message_rtc ?? null,
     status: (message as ChatMessageUI).status,
     requestUid: (message as ChatMessageUI).request_uid,
+    avatar: null,
     blocks: [],
-  } as MappedChatMessage;
+  };
 
-  messageUI.blocks = buildMessageBlocks(messageUI);
+  // 🔹 Форматируем пересланные в обычный контент
+  if (message.forwarded_messages?.length) {
+    mappedMessage.isForwarded = true;
+    mappedMessage.forwardedChatId = message.forwarded_messages[0].from_user;
+    mappedMessage.forwardedUid = message.forwarded_messages[0].uid;
+    mappedMessage.forwardedAuthors = message.forwarded_messages.map((f) =>
+      `${f.first_name || ""} ${f.last_name || ""}`.trim(),
+    );
+    mappedMessage.avatar =
+      message.forwarded_messages[0].avatar || message.forwarded_messages[0].avatar_webp_url;
 
-  return messageUI;
+    // 🔹 текст пересланных НЕ включаем в content
+    // если есть файлы, добавляем их
+    const forwardedFiles = message.forwarded_messages.flatMap((f) =>
+      f.files_list.map(mapMessageFile),
+    );
+    mappedMessage.filesList.push(...forwardedFiles);
+  } else {
+    mappedMessage.isForwarded = false;
+    mappedMessage.forwardedAuthors = [];
+    mappedMessage.avatar = null;
+  }
+
+  mappedMessage.blocks = buildMessageBlocks(mappedMessage);
+
+  return mappedMessage;
 };
 
 export const mapChatMessages = (messages: (ChatMessage | ChatMessageUI)[]): MappedChatMessage[] =>

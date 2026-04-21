@@ -10,11 +10,11 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "border-primary bg-primary desktop:hover:bg-primary-light desktop:hover:border-primary-light desktop:hover:text-primary active:bg-primary-light active:border-primary-light active:text-primary border-[2px] text-white",
+          "active:bg-primary-dark active:border-primary-dark border-primary bg-primary desktop:hover:bg-primary-light desktop:hover:border-primary-light desktop:hover:text-primary border-[2px] text-white",
         outline:
-          "border-primary text-primary desktop:hover:border-accent desktop:hover:text-primary-dark active:border-accent active:text-primary-dark disabled:border-muted border border-[2px]",
-        text: "text-primary desktop:hover:text-primary-light active:text-primary-light bg-transparent p-0",
-        ghost: "",
+          "border-primary text-primary desktop:hover:border-accent desktop:hover:text-primary-light active:border-primary-dark active:text-primary-dark disabled:border-muted border border-[2px]",
+        text: "text-primary desktop:hover:text-primary-light active:text-primary-dark bg-transparent p-0 disabled:bg-transparent",
+        ghost: "disabled:bg-transparent",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",

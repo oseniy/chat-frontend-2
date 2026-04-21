@@ -1,7 +1,6 @@
-import { memo, useCallback, useMemo, useRef } from "react";
+import { memo, useCallback } from "react";
 
 import { Avatar } from "@/entities/chat/ui/avatar";
-import { getChatType } from "@/shared/lib/getChatType";
 import { cn } from "@/shared/shadcn/lib/utils";
 import { Checkbox } from "@/shared/ui/checkbox";
 
@@ -17,97 +16,88 @@ type MessageBubbleProps = {
   currentUserId: string;
   isFirstInGroup?: boolean;
   isLastInGroup?: boolean;
-  "data-message-uid"?: string;
-  "data-chat-key"?: string;
-  "data-is-from-current-user"?: string;
-  "data-is-new"?: string;
+  isGroupChat: boolean;
+  isChannel: boolean;
   [key: `data-${string}`]: string | undefined;
 };
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export const MessageBubble = memo(function MessageBubble({
-  className,
-  chatMessage,
-  currentUserId,
-  isFirstInGroup,
-  isLastInGroup,
-  ...dataAttributes
-}: MessageBubbleProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isMine = chatMessage.fromUser.uid === currentUserId;
-  const setReplyTarget = useChatStore((s) => s.setReplyTarget);
+const messageBubbleComponent = memo(
+  ({
+    className,
+    chatMessage,
+    currentUserId,
+    isFirstInGroup,
+    isLastInGroup,
+    isGroupChat,
+    isChannel,
+    ...dataAttributes
+  }: MessageBubbleProps) => {
+    const isMine = isChannel ? false : chatMessage.fromUser.uid === currentUserId;
+    const { isSelectionMode, selectedMessageUids, toggleMessageSelection } = useChatStore();
+    const isSelected = selectedMessageUids.has(chatMessage.uid);
 
-  const isHighlighted = useMessageNavigation(
-    useCallback((s) => s.highlightMessageId === chatMessage.uid, [chatMessage.uid]),
-  );
+    const { onContextMenu, isOpen } = useMessageContextMenu(chatMessage);
 
-  const { isSelectionMode, selectedMessageUids, toggleMessageSelection } = useChatStore();
+    const isHighlighted = useMessageNavigation(
+      useCallback((s) => s.highlightMessageId === chatMessage.uid, [chatMessage.uid]),
+    );
+    // В каналах имя отправителя не показываем
+    const showSenderName = !isMine && isGroupChat && isFirstInGroup && !isChannel;
 
-  const isSelected = selectedMessageUids.has(chatMessage.uid);
+    // Место под аватарку резервируем только в группах (не в личках и не в каналах)
+    const shouldShowSideContent = !isMine && isGroupChat && !isChannel;
 
-  const handleDoubleClick = () => {
-    setReplyTarget(chatMessage);
-  };
-
-  const outerDataAttributes = useMemo(() => {
-    const attrs: Record<string, string> = {};
-    Object.entries(dataAttributes).forEach(([key, value]) => {
-      if (key.startsWith("data-") && value !== undefined) {
-        attrs[key] = value;
-      }
-    });
-    return attrs;
-  }, [dataAttributes]);
-
-  const { onContextMenu, isOpen } = useMessageContextMenu(chatMessage);
-  const chatType = getChatType(chatMessage.chatKey);
-
-  return (
-    <div
-      className={cn(
-        "flex w-full min-w-0 flex-1 items-center transition-colors duration-300 ease-out",
-        (selectedMessageUids.has(chatMessage.uid) || isHighlighted || isOpen) && "bg-muted",
-        className,
-      )}
-    >
-      {isSelectionMode && (
-        <Checkbox
-          checked={isSelected}
-          onChange={() => toggleMessageSelection(chatMessage.uid)}
-          className="ml-4"
-        />
-      )}
-      {!isMine && chatType != "chat" && (
-        <div className="ml-4 flex w-8 shrink-0 items-end pb-0.5">
-          {isLastInGroup && <Avatar size="s" avatarUrl={chatMessage.fromUser.avatarUrl} />}
-        </div>
-      )}
+    return (
       <div
-        ref={ref}
-        id={`msg-${chatMessage.uid}`}
         className={cn(
-          "flex flex-1 px-4 transition-colors duration-300 ease-out select-none",
-          isMine ? "justify-end" : "justify-start",
+          "flex w-full min-w-0 flex-1 items-center transition-colors duration-300 ease-out",
+          (isSelected || isHighlighted || isOpen) && "bg-muted",
+          className,
         )}
-        onDoubleClick={handleDoubleClick}
-        onClick={(e) => {
-          if (isSelectionMode) {
-            e.stopPropagation();
-            toggleMessageSelection(chatMessage.uid);
-          }
-        }}
-        onContextMenu={onContextMenu}
-        {...outerDataAttributes}
+        {...dataAttributes}
       >
-        <MessageLayout
-          isMine={isMine}
-          message={chatMessage}
-          blocks={chatMessage.blocks}
-          isFirstInGroup={isFirstInGroup}
-        />
-      </div>
-    </div>
-  );
-});
+        {isSelectionMode && (
+          <Checkbox
+            checked={isSelected}
+            onChange={() => toggleMessageSelection(chatMessage.uid)}
+            className="ml-4 shrink-0"
+          />
+        )}
 
+        {shouldShowSideContent && (
+          <div className="ml-4 flex w-8 shrink-0 items-end self-stretch pb-0.5">
+            {isLastInGroup ? (
+              <Avatar size="s" avatarUrl={chatMessage.fromUser.avatarUrl} />
+            ) : (
+              <div className="w-8" aria-hidden="true" />
+            )}
+          </div>
+        )}
+
+        <div
+          id={`msg-${chatMessage.uid}`}
+          className={cn(
+            "flex min-w-0 flex-1 px-4 transition-colors duration-300 ease-out select-none",
+            isMine ? "justify-end" : "justify-start",
+            // Если контента слева нет (личка/канал), добавляем стандартный паддинг
+            !shouldShowSideContent && !isMine && "pl-4",
+          )}
+          onClick={() => isSelectionMode && toggleMessageSelection(chatMessage.uid)}
+          onContextMenu={onContextMenu}
+        >
+          <MessageLayout
+            isMine={isMine}
+            message={chatMessage}
+            blocks={chatMessage.blocks}
+            showSenderName={showSenderName}
+          />
+        </div>
+      </div>
+    );
+  },
+);
+
+messageBubbleComponent.displayName = "MessageBubble";
+
+export const MessageBubble = messageBubbleComponent;
 export default MessageBubble;

@@ -27,5 +27,12 @@ export const POST = async () => {
     maxAge: 0,
   });
 
+  res.cookies.set({
+    name: "is_filled",
+    value: "",
+    path: "/",
+    maxAge: 0,
+  });
+
   return res;
 };

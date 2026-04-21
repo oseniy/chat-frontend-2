@@ -1,7 +1,7 @@
-import { getChatType } from "@/shared/lib/getChatType";
+import { getChatTypeLight } from "@/entities/chat/lib/getChatTypeLight";
 
 export const useAnothersProfileLogic = (chatKey: string) => {
-  const chatType = getChatType(chatKey);
+  const chatType = getChatTypeLight(chatKey);
   const title =
     chatType === "chat"
       ? "Информация"

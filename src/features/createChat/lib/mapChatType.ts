@@ -1,4 +1,4 @@
-import { ChatType } from "../model/types";
+import { ChatType } from "@/entities/chat/model/types";
 
 export const mapChatTypeToValue = (type: ChatType | null, mode: "group" | "channel"): 1 | 2 => {
   if (!type) return 1; // Дефолтное значение

@@ -2,18 +2,14 @@ import { create } from "zustand";
 
 import { detectAttachmentType } from "../../lib/detectAttachmentType";
 import { getVideoThumbnail } from "../../lib/getVideoThumbnail";
+import { isAllowedFile } from "../../lib/isAllowedFile";
+import { BasePendingAttachment } from "../types/types";
 
-export type AttachmentType = "image" | "video" | "audio" | "document";
+export type AttachmentType = "video" | "audio" | "document";
 
-export type PendingFile = {
+export type PendingFile = BasePendingAttachment & {
   id: string;
-  file: File;
   type: AttachmentType;
-
-  title?: string;
-  weight?: number;
-  previewUrl?: string;
-  duration?: number;
 };
 
 type SendFilesState = {
@@ -28,7 +24,7 @@ export const useSendFilesStore = create<SendFilesState>((set) => ({
   attachments: [],
 
   addFiles: async (files) => {
-    const pending: PendingFile[] = files.map((file) => {
+    const pending: PendingFile[] = files.filter(isAllowedFile).map((file) => {
       const type = detectAttachmentType(file);
       const id = crypto.randomUUID();
 
@@ -38,7 +34,6 @@ export const useSendFilesStore = create<SendFilesState>((set) => ({
         type,
         title: file.name,
         weight: file.size,
-        previewUrl: type === "image" ? URL.createObjectURL(file) : undefined,
       };
     });
 

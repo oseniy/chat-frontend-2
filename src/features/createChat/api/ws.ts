@@ -1,8 +1,7 @@
 import { ChatObject } from "@/entities/chat/model/types";
+import { ChatType } from "@/entities/chat/model/types";
 import { WSBaseResponse } from "@/shared/api/ws/model/types";
 import { sendWSRequest } from "@/shared/api/ws/wsClient";
-
-import { ChatType } from "../model/types";
 
 export type CreateChatArgs = {
   name: string;

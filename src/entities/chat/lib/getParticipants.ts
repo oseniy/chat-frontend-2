@@ -8,7 +8,6 @@ export const getParticipants = async (
   url?: string,
 ): Promise<ChatParticipantListResponse> => {
   let targetUrl = `/api/v1/chat/list/groups_or_channels/${chatKey}/participants/`;
-
   // Если URL пришел из поля "next" бэкенда
   if (url) {
     try {

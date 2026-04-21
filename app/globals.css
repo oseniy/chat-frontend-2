@@ -50,6 +50,7 @@
   --muted-foreground: #00000033;
   --caption: #ffffff;
   --error: #ff0000;
+  --active-error: #fb6266;
   --black: #1c1c1e;
   --gray: #747474;
   --light-gray: #c5c5c5;
@@ -142,6 +143,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-caption: var(--caption);
   --color-error: var(--error);
+  --color-active-error: var(--active-error);
   --color-black: var(--black);
   --color-gray: var(--gray);
   --color-light-gray: var(--light-gray);
@@ -350,4 +352,26 @@ body {
   background: var(--color-primary);
   border: none;
   cursor: pointer;
+}
+
+@utility classic-links {
+  & a {
+    color: #0000ee; /* Стандартный синий цвет ссылки */
+    text-decoration: underline;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+
+  & a:visited {
+    color: #551a8b; /* Классический фиолетовый для посещенных */
+  }
+
+  & a:hover {
+    color: #0000ee;
+    text-decoration: none;
+  }
+
+  & a:active {
+    color: #ff0000; /* Красный при клике */
+  }
 }

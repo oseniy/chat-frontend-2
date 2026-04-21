@@ -4,8 +4,9 @@ import { getImageSize } from "./getImageSize";
 export const checkAvatarParams = async (
   file: File,
 ): Promise<{ isValid: boolean; error?: string }> => {
+  if (!file) return { isValid: false, error: "Файл не выбран." };
   if (file.size === 0) {
-    return { isValid: false, error: "Файл не выбран." };
+    return { isValid: false, error: "Загружаемый файл пуст." };
   }
   if (!AVATAR_PARAMS.types.includes(file.type)) {
     return {
@@ -26,8 +27,7 @@ export const checkAvatarParams = async (
     if (width < AVATAR_PARAMS.minWidth || height < AVATAR_PARAMS.minHeight) {
       return { isValid: false, error: "Минимальный размер изображения 320x320px" };
     }
-  } catch (error) {
-    console.log(error);
+  } catch {
     return { isValid: false, error: "Не удалось прочитать изображение" };
   }
 

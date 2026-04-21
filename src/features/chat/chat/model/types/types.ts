@@ -6,3 +6,12 @@ export type MessageGroupType = {
   label: string;
   messages: MappedChatMessage[];
 };
+
+export type BasePendingAttachment = {
+  file: File;
+
+  previewUrl?: string;
+  title?: string;
+  weight?: number;
+  duration?: number;
+};

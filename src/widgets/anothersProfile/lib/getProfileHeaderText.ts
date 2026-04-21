@@ -8,18 +8,24 @@ const CHAT_TYPE_LABELS: Record<ChatTypeLight, string> = {
 
 interface ProfileHeaderTextArgs {
   chatType: ChatTypeLight;
-  isMainActive: boolean;
   activeSection: string;
+  activeTab: string;
 }
 
 export const getProfileHeaderText = ({
   chatType,
-  isMainActive,
   activeSection,
+  activeTab,
 }: ProfileHeaderTextArgs): string => {
-  if (isMainActive) {
+  if (activeSection === "main") {
     return CHAT_TYPE_LABELS[chatType];
+  } else if (activeSection === "settings") {
+    return "Настройки";
+  } else if (activeSection === "invite" && chatType == "group") {
+    return "Добавить участников";
+  } else if (activeSection === "invite" && chatType == "channel") {
+    return "Добавить подписчиков";
+  } else {
+    return activeTab === "participants" ? "Участники" : "Вложения";
   }
-
-  return activeSection === "participants" ? "Участники" : "Вложения";
 };

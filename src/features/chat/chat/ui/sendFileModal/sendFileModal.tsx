@@ -12,6 +12,8 @@ import { cn } from "@/shared/shadcn/lib/utils";
 import { AlertDialogHeader, AlertDialogTitle } from "@/shared/shadcn/ui/alert-dialog";
 import { Button } from "@/shared/shadcn/ui/button";
 import { FileList } from "@/shared/ui/fileList/fileList";
+
+import { useSendMessage } from "../../hooks";
 export type SendFileModalProps = {
   className?: string;
   isOpen: boolean;
@@ -33,6 +35,13 @@ export const SendFileModal: React.FC<SendFileModalProps> = ({ className, isOpen,
   const handleAttach = async () => {
     const files = await openFilePicker();
     if (files.length) addFiles(files);
+  };
+
+  const sendMessage = useSendMessage();
+
+  const handleSend = async (text: string) => {
+    handleClose();
+    await sendMessage(text, [], files);
   };
 
   if (!files.length) return null;
@@ -73,7 +82,7 @@ export const SendFileModal: React.FC<SendFileModalProps> = ({ className, isOpen,
             className="mt-4 p-0 pr-5"
             variant="modal"
             isKeyboardOpen={isKeyboardOpen}
-            onSubmitMessage={() => null}
+            onSubmitMessage={handleSend}
             isAttachBtnDisabled={true}
             isVoiceBtnDisabled={true}
             placeholder="Добавить подпись"

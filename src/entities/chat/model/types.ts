@@ -48,6 +48,10 @@ export type ChatObject = {
     uid: string;
     full_name: string;
   }>;
+  remove_users: Array<{
+    uid: string;
+    full_name: string;
+  }>;
 };
 
 export interface ChatListItemDto {
@@ -141,4 +145,18 @@ export type ChatParticipantListResponse = {
   count: number;
   next: string | null;
   results: ChatParticipant[];
+};
+
+export type ChatPreviewDto = {
+  name: string;
+  description: string;
+  participants_count: number;
+  avatar_webp_url: string | null;
+};
+
+export type ChatPreview = {
+  name: string;
+  description: string;
+  participantsCount: number;
+  avatarUrl: string | null;
 };

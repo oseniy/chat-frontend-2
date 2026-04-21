@@ -1,6 +1,7 @@
 import { pluralize } from "@/shared/lib/pluralize";
 
 import {
+  AUDIO_TYPES,
   FILE_TYPES,
   GIF_TYPES,
   IMAGE_TYPES,
@@ -14,15 +15,22 @@ export const getLastMessagePreview = ({
   files,
 }: GetLastMessagePreviewParams): LastMessagePreview => {
   if (!files || files.count === 0) {
-    return { icons: [], text: content || "Сообщение" };
+    return { icons: [], text: content || "Сообщений нет" };
   }
 
   const { types, count } = files;
 
+  const hasAudio = types.some((t) => AUDIO_TYPES.includes(t));
   const hasImages = types.some((t) => IMAGE_TYPES.includes(t) || GIF_TYPES.includes(t));
   const hasVideos = types.some((t) => VIDEO_TYPES.includes(t));
   const hasFiles = types.some((t) => FILE_TYPES.includes(t));
 
+  if (hasAudio) {
+    return {
+      icons: [],
+      text: content && content !== " " ? content : `Голосовое сообщение`,
+    };
+  }
   // только картинки
   if (hasImages && !hasVideos && !hasFiles) {
     const icons: PreviewIconType[] = Array(Math.min(count, MAX_ICONS_DISPLAY)).fill("photo");

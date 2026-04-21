@@ -5,6 +5,7 @@ import { cn } from "@/shared/shadcn/lib/utils";
 
 type ToastProps = {
   message?: string;
+  className?: string;
   duration?: number;
   onClose: () => void;
   iconColor?: string;
@@ -17,6 +18,7 @@ type ToastProps = {
 export const Toast = ({
   message = "Новый код отправлен",
   duration = 3000,
+  className,
   onClose,
   icon,
   iconColor,
@@ -41,7 +43,10 @@ export const Toast = ({
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      className="desktop:top-auto animate-in fade-in slide-in-from-bottom-2 desktop:bottom-0 desktop:left-1/2 desktop:mb-6 desktop:max-w-90 desktop:-translate-x-1/2 pointer-events-none absolute top-3 left-1/2 w-90 -translate-x-1/2 transform rounded-md bg-[rgba(0,0,0,0.6)] p-3 text-white duration-200"
+      className={cn(
+        "desktop:top-auto animate-in fade-in slide-in-from-bottom-2 desktop:bottom-0 desktop:left-1/2 desktop:mb-6 desktop:max-w-90 desktop:-translate-x-1/2 pointer-events-none absolute top-3 left-1/2 w-90 -translate-x-1/2 transform rounded-md bg-[rgba(0,0,0,0.6)] p-3 text-white duration-200",
+        className,
+      )}
     >
       <div className="flex items-center">
         <Image

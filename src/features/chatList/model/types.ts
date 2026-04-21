@@ -1,5 +1,5 @@
 import { ChatListItem } from "@/entities/chat/model/types";
-import { ChatType } from "@/features/createChat/model/types";
+import { ChatType } from "@/entities/chat/model/types";
 
 export type ChatListState = {
   chats: ChatListItem[];

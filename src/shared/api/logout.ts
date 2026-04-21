@@ -3,41 +3,34 @@ import { useContactStore } from "@/entities/contact/model/store";
 import { useUserStore } from "@/entities/user/model/userStore";
 import { useChatListStore } from "@/features/chatList/model/useChatListStore";
 
-import { getApiClient } from "./getApiClient";
+import { broadcastLogout } from "./authChannel";
 import { getQueryClient } from "./getQueryClient";
 import { useAuthStore } from "./store";
 import { disconnectWS } from "./ws/wsClient";
 
-export const logout = async () => {
-  const store = useAuthStore.getState();
-  const chatListStore = useChatListStore.getState();
-  const chatStore = useChatStore.getState();
-  const contactsStore = useContactStore.getState();
-  const queryClient = getQueryClient();
+export const logout = async (options?: { broadcast?: boolean }) => {
+  const { broadcast = true } = options ?? {};
 
-  if (!store.accessToken) {
-    return;
-  }
+  // 1. Ставим метку
+  localStorage.setItem("isLoggedOut", "true");
 
-  queryClient.clear();
-  // чистим access token
-  store.clearAccessToken();
+  // 2. Чистим стейты (синхронно)
+  useAuthStore.getState().clearAccessToken();
   useUserStore.getState().reset();
-  chatListStore.reset();
-  chatStore.reset();
-  contactsStore.reset();
-  delete getApiClient.defaults.headers.common["Authorization"];
+  useChatListStore.getState().reset();
+  useChatStore.getState().reset();
+  useContactStore.getState().reset();
+  getQueryClient().clear();
 
-  // чистим client-side куки
-  document.cookie = "is_filled=false; path=/";
-  document.cookie = "phone=; Max-Age=0; path=/";
-
+  if (broadcast) broadcastLogout();
   disconnectWS();
 
-  try {
-    // серверный логаут для httpOnly refresh token
-    await fetch("/api/logout", { method: "POST", credentials: "include" });
-  } catch {
-    // игнорируем ошибки
+  // 3. Пытаемся стукнуть в API (без await)
+  fetch("/api/logout", { method: "POST", credentials: "include" }).catch(() => {});
+
+  // 4. РЕДИРЕКТ С ПРОВЕРКОЙ
+  // Если мы уже на странице авторизации, НЕ ПЕРЕЗАГРУЖАЕМ её
+  if (!window.location.pathname.startsWith("/auth")) {
+    window.location.href = "/auth/";
   }
 };

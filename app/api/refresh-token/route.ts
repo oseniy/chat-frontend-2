@@ -1,9 +1,7 @@
-"use server";
-
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export async function POST() {
+export const POST = async () => {
   const cookieStore = await cookies();
   const refreshToken = cookieStore.get("refresh_token")?.value;
   if (!refreshToken) {
@@ -25,20 +23,20 @@ export async function POST() {
       );
     }
 
+    const response = NextResponse.json({ access: data.access });
+
     if (data.refresh) {
-      cookieStore.set({
-        name: "refresh_token",
-        value: data.refresh,
+      response.cookies.set("refresh_token", data.refresh, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 30,
       });
     }
 
-    return NextResponse.json({ access: data.access });
+    return response;
   } catch {
     return NextResponse.json({ error: "Серверная ошибка" }, { status: 500 });
   }
-}
+};

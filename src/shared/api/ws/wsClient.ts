@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import { QueuedRequest, WSBaseResponse, WSHandler, WSStatus } from "./model/types";
 import { useWSRequestStore } from "./model/wsRequest.store";
+import { logIncomingMessage, logOutgoingMessage, logQueuedMessage } from "./wsLogger";
 
 let socket: WebSocket | null = null;
 let currentToken: string | null = null;
@@ -44,6 +45,7 @@ const drainQueue = () => {
   while (requestQueue.length > 0) {
     const request = requestQueue.shift();
     if (request) {
+      logOutgoingMessage(request);
       socket.send(JSON.stringify(request));
     }
   }
@@ -61,7 +63,7 @@ const attachHandlers = (ws: WebSocket) => {
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data) as WSBaseResponse<unknown>;
-
+      logIncomingMessage(data);
       handlers.forEach((handler) => handler(data));
     } catch {
       console.warn("WS raw message:", event.data);
@@ -91,8 +93,9 @@ export const sendWSRequest = <TResponse>(
   action: string,
   payload: unknown,
   requestUid?: string,
-): Promise<TResponse & { request_uid: string }> => {
-  const currentSocket = getSocket();
+): Promise<TResponse> => {
+  const socket = getSocket();
+
   const request_uid = requestUid || uuidv4();
 
   let message: WSMessage;
@@ -121,18 +124,21 @@ export const sendWSRequest = <TResponse>(
     .getState()
     .trackRequest<TResponse & { request_uid: string }>(request_uid);
 
-  if (!currentSocket || currentSocket.readyState !== WebSocket.OPEN) {
-    console.warn(`⏳ WS: Socket not ready. Queuing action: ${action}`);
-    // Приведение к типу очереди (QueuedRequest обычно совпадает с WSMessage)
-    requestQueue.push(message as unknown as QueuedRequest);
+  // 2. Проверяем состояние
+  if (!socket || socket.readyState !== WebSocket.OPEN) {
+    logQueuedMessage(message);
+    requestQueue.push(message);
+    scheduleReconnect();
   } else {
-    currentSocket.send(JSON.stringify(message));
+    logOutgoingMessage(message);
+    socket.send(JSON.stringify(message));
   }
 
   return promise;
 };
 
 const scheduleReconnect = () => {
+  console.log("currentToken from connectWS: ", currentToken);
   if (!currentToken) return;
   clearReconnectTimeout();
   const delay = getReconnectDelay();
@@ -143,6 +149,9 @@ const scheduleReconnect = () => {
 };
 
 export const connectWS = (accessToken: string) => {
+  // защита от лишних connect
+  console.log("accessTOken from connectWS: ", accessToken);
+
   if (
     socket &&
     currentToken === accessToken &&

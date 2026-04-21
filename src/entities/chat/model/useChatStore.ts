@@ -1,8 +1,9 @@
 import { create } from "zustand";
 
-import { MappedChatMessage } from "@/features/chat/chat/model/types/mappedTypes";
+import { MappedChatMessage, MappedMessageFile } from "@/features/chat/chat/model/types/mappedTypes";
 import { MESSAGE_STATUS } from "@/shared/constants/constants";
 
+import { getChatMedia } from "../api/getChatMedia";
 import { ChatType } from "./types";
 
 interface ChatState {
@@ -11,18 +12,30 @@ interface ChatState {
   chatKey: string | null;
   chatType: ChatType | null;
   createdBy: string | null;
+  media: MappedMessageFile[];
+  isLoadingMedia: boolean;
+  isMediaLoaded: boolean;
+  chatUid: string | null;
   isReady: boolean;
   isHide: boolean;
   chatKeyUser: string | null;
+  chatId: number | null;
 
   replyTarget: MappedChatMessage | null;
-  forwardTarget: MappedChatMessage | null;
+  forwardTargets: MappedChatMessage[];
+
+  fetchMedia: (chatKey: string) => Promise<void>;
 
   setReplyTarget: (message: MappedChatMessage | null) => void;
-  setForwardTarget: (message: MappedChatMessage | null) => void;
+  setForwardTargets: (messages: MappedChatMessage[]) => void;
 
   isSelectionMode: boolean;
   selectedMessageUids: Set<string>;
+
+  isVoiceRecord: boolean;
+
+  enterVoiceRecord: () => void;
+  exitVoiceRecord: () => void;
 
   enterSelectionMode: (uid?: string) => void;
   toggleMessageSelection: (uid: string) => void;
@@ -36,12 +49,19 @@ interface ChatState {
     chatType: ChatType,
     createdBy?: string,
     chatKeyUser?: string | null,
+    chatUid?: string,
+    chatId?: number,
+    forwardTargets?: [],
   ) => void;
+  prependMessages: (messages: MappedChatMessage[]) => void;
   addMessage: (message: MappedChatMessage) => void;
   updateMessageStatus: (uid: string, status: MappedChatMessage["status"]) => void;
   markAsRead: (uid: string) => void;
   setFailedStatus: (requestUid: string) => void;
   clearMessages: () => void;
+  clearForwardTargets: () => void;
+  clearReplyTarget: () => void;
+  clearMedia: () => void;
   reset: () => void;
 }
 
@@ -49,12 +69,18 @@ export const useChatStore = create<ChatState>((set) => ({
   messages: [],
   currentUserId: null,
   chatKey: null,
+  chatUid: null,
   isReady: false,
+  chatId: null,
+  isLoadingMedia: false,
+  isMediaLoaded: false,
+  media: [],
   isHide: false,
   replyTarget: null,
-  forwardTarget: null,
+  forwardTargets: [],
   chatType: null,
   createdBy: null,
+  isVoiceRecord: false,
   chatKeyUser: null,
   isSelectionMode: false,
   selectedMessageUids: new Set(),
@@ -64,6 +90,9 @@ export const useChatStore = create<ChatState>((set) => ({
       isSelectionMode: true,
       selectedMessageUids: uid ? new Set([uid]) : new Set(),
     })),
+
+  enterVoiceRecord: () => set({ isVoiceRecord: true }),
+  exitVoiceRecord: () => set({ isVoiceRecord: false }),
 
   toggleMessageSelection: (uid) =>
     set((state) => {
@@ -76,18 +105,74 @@ export const useChatStore = create<ChatState>((set) => ({
       };
     }),
 
+  fetchMedia: async (chatKey: string) => {
+    if (!chatKey) return;
+    set({ isLoadingMedia: true });
+    try {
+      const data = await getChatMedia(chatKey);
+
+      const imagesOnly = (data as unknown as Record<string, unknown>[])
+        .filter((file) => {
+          const type = (file.file_type || file.fileType) as string | undefined;
+          return type?.startsWith("image/");
+        })
+        .map((file) => ({
+          ...file,
+          fileType: (file.file_type || file.fileType) as string,
+          fileUrl: (file.file_url || file.fileUrl) as string,
+        })) as unknown as MappedMessageFile[];
+
+      set({ media: imagesOnly, isLoadingMedia: false, isMediaLoaded: true });
+    } catch {
+      set({ isLoadingMedia: false, isMediaLoaded: false });
+    }
+  },
+
   exitSelectionMode: () =>
     set(() => ({
       isSelectionMode: false,
       selectedMessageUids: new Set(),
     })),
 
-  setInitialData: (messages, currentUserId, chatKey, chatType, createdBy, chatKeyUser) => {
-    set({ messages, currentUserId, chatKey, isReady: true, chatType, createdBy, chatKeyUser });
+  setInitialData: (
+    messages,
+    currentUserId,
+    chatKey,
+    chatType,
+    createdBy,
+    chatKeyUser,
+    chatUid,
+    chatId,
+  ) => {
+    set({
+      messages,
+      currentUserId,
+      chatKey,
+      isReady: true,
+      chatType,
+      chatUid,
+      chatId,
+      createdBy,
+      chatKeyUser,
+    });
+  },
+
+  prependMessages: (newMessages) => {
+    set((state) => {
+      if (newMessages.length === 0) return state;
+      const existingUids = new Set(state.messages.map((msg) => msg.uid));
+      const uniqueNewMessages = newMessages.filter((msg) => !existingUids.has(msg.uid));
+      if (uniqueNewMessages.length === 0) return state;
+      return {
+        messages: [...uniqueNewMessages, ...state.messages],
+      };
+    });
   },
 
   setReplyTarget: (message) => set({ replyTarget: message }),
-  setForwardTarget: (message) => set({ forwardTarget: message }),
+  clearReplyTarget: () => set({ replyTarget: null }),
+  setForwardTargets: (messages) => set({ forwardTargets: messages }),
+  clearForwardTargets: () => set({ forwardTargets: [] }),
 
   deleteMessage: (uid) =>
     set((state) => ({ messages: state.messages.filter((msg) => msg.uid !== uid) })),
@@ -138,6 +223,7 @@ export const useChatStore = create<ChatState>((set) => ({
 
   clearMessages: () => set({ messages: [], replyTarget: null }),
 
+  clearMedia: () => set({ media: [], isLoadingMedia: false, isMediaLoaded: false }),
   reset: () =>
     set({
       messages: [],
@@ -145,6 +231,9 @@ export const useChatStore = create<ChatState>((set) => ({
       chatKey: null,
       isReady: false,
       replyTarget: null,
-      forwardTarget: null,
+      media: [],
+      isLoadingMedia: false,
+      isMediaLoaded: false,
+      // forwardTargets: [],
     }),
 }));

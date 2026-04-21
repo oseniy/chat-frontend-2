@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { saveIsFilledToCookie } from "@/shared/api/actions/saveIsFilledToCookie";
 import { useAuthStore } from "@/shared/api/store";
 
 import { sendCode } from "../../phoneForm/api/sendCode";
@@ -130,7 +131,7 @@ export const useVerification = ({
     if (response.access_token) {
       setIsCodeExpired(false);
       setAccessToken(response.access_token);
-      document.cookie = `is_filled=${response.is_filled ? "true" : "false"}; path=/`;
+      await saveIsFilledToCookie(response.is_filled ?? false);
       resetVerification();
       return { success: true, is_filled: response.is_filled };
     }

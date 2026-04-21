@@ -5,29 +5,67 @@ import MarkAsUnread from "@icons/chat/markAsUnread.svg";
 import Mute from "@icons/chat/mute.svg";
 import Favorite from "@icons/chat/pin.svg";
 import Unmute from "@icons/chat/unMute.svg";
-import { MouseEvent } from "react";
+import { MouseEvent, useCallback, useState } from "react";
 
 import { ChatListItem } from "@/entities/chat/model/types";
 import { ChatActions } from "@/features/chatList/model/types";
+import { useChatListStore } from "@/features/chatList/model/useChatListStore";
+import { useAddToContacts } from "@/features/contacts/addToContacts/lib/useAddToContacts";
 import { useContextMenu } from "@/shared/ui/contextMenu/contextMenuProvider";
 
 export const useChatListItemContextMenu = (chat: ChatListItem, actions: ChatActions) => {
   const { openMenu, activeMenuId } = useContextMenu();
+  const patchChat = useChatListStore((s) => s.patchChat);
+  const [showAddedModal, setShowAddedModal] = useState(false);
+  const { mutate: addContact } = useAddToContacts();
 
   const menuId = `chat-${chat.id}`;
 
+  const handleAddToContacts = () => {
+    if (!chat.member.username) return;
+
+    patchChat(chat.key, {
+      member: { ...chat.member, is_in_contacts: true },
+    });
+
+    addContact(
+      {
+        phone: chat.member.username,
+        first_name: chat.member.first_name,
+        last_name: chat.member.last_name ?? "",
+      },
+      // onSuccess
+      () => setShowAddedModal(true),
+      // onError (Откат)
+      () => {
+        patchChat(chat.key, {
+          member: { ...chat.member, is_in_contacts: false },
+        });
+      },
+    );
+  };
+  const handleModalClose = useCallback(() => {
+    setShowAddedModal(false);
+  }, []);
+
   return {
+    showAddedModal,
+    handleModalClose,
+    addedContactName: {
+      firstName: chat.member.first_name,
+      lastName: chat.member.last_name ?? "",
+    },
     onContextMenu: (e: MouseEvent) => {
       e.preventDefault();
       openMenu(
         menuId,
         [
-          ...(chat.type === "chat"
+          ...(chat.type === "chat" && !chat.member.is_in_contacts
             ? [
                 {
                   label: "Добавить в контакты",
                   icon: PersonAdd,
-                  onClick: () => console.log("Добавить в контакты", chat.id),
+                  onClick: handleAddToContacts,
                 },
               ]
             : []),

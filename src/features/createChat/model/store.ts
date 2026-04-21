@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { ChatType } from "./types";
+import { ChatType } from "@/entities/chat/model/types";
 
 interface CreateChatState {
   step: 1 | 2 | "loading";

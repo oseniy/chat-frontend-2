@@ -1,3 +1,5 @@
+"use client";
+
 import block from "@icons/block.svg";
 import forwardedd from "@icons/chat/forwardedd.svg";
 import erase from "@icons/erase.svg";
@@ -19,11 +21,14 @@ export const useAnothersProfileContextMenu = ({
   const { openMenu, activeMenuId } = useContextMenu();
   const openModal = useModalStore((s) => s.openModal);
   const menuId = "anothersProfile";
+
   const { clearChatModalVariant, confirmClear } = useClearChat({
     chatId,
+    chatKey: null,
     chatName,
     chatType: "chat",
   });
+
   return useMemo(
     () => ({
       onContextMenu: (e: MouseEvent) => {
@@ -35,7 +40,7 @@ export const useAnothersProfileContextMenu = ({
               label: "Поделиться профилем",
               icon: forwardedd,
               onClick: () => {
-                console.warn("Заблокировать пользователя - заглушка");
+                // Логика заглушки
               },
             },
             {
@@ -54,7 +59,7 @@ export const useAnothersProfileContextMenu = ({
               icon: block,
               destructive: true,
               onClick: () => {
-                console.warn("Пожаловаться - заглушка");
+                // Логика заглушки
               },
             },
           ],

@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from "react";
 
 import { Contact } from "@/entities/contact/model/types";
-import { useSelectContactsStore } from "@/features/contacts/model/SelectContactsStore";
+
+import { useStep2SelectionStore } from "../model/step2SelectionStore";
 
 type UseStep2LogicProps = {
   contacts: Contact[];
@@ -10,11 +11,8 @@ type UseStep2LogicProps = {
 };
 
 export const useStep2Logic = ({ contacts, search, isInitialized }: UseStep2LogicProps) => {
-  const setIsSelecting = useSelectContactsStore((s) => s.setIsSelecting);
-  const resetSelectionStore = useSelectContactsStore((s) => s.reset);
   const isSearching = search.trim().length > 0;
 
-  // Фильтрация локальных контактов
   const filteredLocalContacts = useMemo(() => {
     if (!isSearching) return contacts;
     const query = search.toLowerCase();
@@ -28,11 +26,9 @@ export const useStep2Logic = ({ contacts, search, isInitialized }: UseStep2Logic
   }, [contacts, search, isSearching]);
 
   useEffect(() => {
-    setIsSelecting(true);
-    return () => resetSelectionStore();
+    return () => useStep2SelectionStore.getState().clear();
   }, []);
 
-  // Вычисляемые состояния для UI
   const showLocalContacts =
     filteredLocalContacts.length > 0 || (!isSearching && contacts.length > 0);
   const showNoResults = isSearching && filteredLocalContacts.length === 0;

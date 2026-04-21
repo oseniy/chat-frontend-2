@@ -1,10 +1,9 @@
-import Image from "next/image";
-
 import { formatFileSize } from "@/features/chat/chat/lib/formatFileSize";
 import { PendingFile } from "@/features/chat/chat/model/store/useChatSendFilesStore";
+import { truncateFileName } from "@/shared/lib/truncateFilename";
 import { cn } from "@/shared/shadcn/lib/utils";
-import Audio from "@/shared/ui/icons/files/audioPreview.svg";
-import File from "@/shared/ui/icons/files/filePreview.svg";
+
+import { FileIcon } from "./fileIcon";
 
 type FilePreviewProps = {
   className?: string;
@@ -14,7 +13,7 @@ type FilePreviewProps = {
 export const FilePreview: React.FC<FilePreviewProps> = ({ className, file }) => {
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className="flex h-12 w-12 items-center justify-center rounded-full">
+      {/* <div className="flex h-12 w-12 items-center justify-center rounded-full">
         {file.type === "document" && <File className="h-full w-full" />}
         {(file.type === "image" || file.type === "video") && (
           <Image
@@ -26,10 +25,17 @@ export const FilePreview: React.FC<FilePreviewProps> = ({ className, file }) => 
           />
         )}
         {file.type === "audio" && <Audio className="h-full w-full" />}
-      </div>
-      <div className="flex max-w-[136px] flex-col sm:max-w-[280px] lg:max-w-[260px]">
-        <span className="subtext mb-1 truncate text-black">{file.title}</span>
-        <span className="text-gray minitext">{formatFileSize(file.file.size)}</span>
+      </div> */}
+      <FileIcon
+        type={file.type}
+        title={file.title || file.file.name || ""}
+        previewUrl={file.previewUrl}
+      />
+      <div className="grid min-w-0 flex-1 grid-cols-1 gap-1">
+        <span className="subtext truncate text-black">
+          {truncateFileName(file.title || file.file.name)}
+        </span>
+        <span className="text-gray minitext truncate">{formatFileSize(file.file?.size)}</span>
       </div>
     </div>
   );

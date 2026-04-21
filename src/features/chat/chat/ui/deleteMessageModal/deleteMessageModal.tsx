@@ -1,9 +1,9 @@
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
 import { useState } from "react";
 
+import { ChatType } from "@/entities/chat/model/types";
 import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { useChatListStore } from "@/features/chatList/model/useChatListStore";
-import { ChatType } from "@/features/createChat/model/types";
 import { pluralize } from "@/shared/lib/pluralize";
 import { ModalDialog } from "@/shared/modalDialog/ui/modalDialog";
 import { cn } from "@/shared/shadcn/lib/utils";
@@ -43,7 +43,7 @@ export const DeleteMessageModal: React.FC<DeleteMessageModalProps> = ({
     exitSelectionMode,
   } = useChatStore.getState();
 
-  const [isChecked, setIsChecked] = useState(false);
+  const [isChecked, setIsChecked] = useState(true);
 
   const messageIds = isSelectionMode
     ? Array.from(selectedMessageUids)
@@ -51,8 +51,10 @@ export const DeleteMessageModal: React.FC<DeleteMessageModalProps> = ({
       ? [messageId]
       : [];
 
-  const firstMessage = messages.find((msg) => msg.uid === messageIds[0]);
-  const isAvailableToDelete = firstMessage && currentUserId === firstMessage.fromUser.uid;
+  const selectedMessages = messages.filter((msg) => messageIds.includes(msg.uid));
+  const isAvailableToDelete =
+    selectedMessages.length > 0 &&
+    selectedMessages.every((msg) => currentUserId === msg.fromUser.uid);
 
   const name =
     chatType === "chat" && chatKeyUser
@@ -68,7 +70,7 @@ export const DeleteMessageModal: React.FC<DeleteMessageModalProps> = ({
       chatKey,
       chatType: chatType as ChatType,
       chatKeyUser,
-      forAll: isChecked,
+      forAll: isAvailableToDelete && isChecked,
     });
   };
 
@@ -103,23 +105,22 @@ export const DeleteMessageModal: React.FC<DeleteMessageModalProps> = ({
         )}
       </AlertDialogHeader>
 
-      <AlertDialogFooter className="flex-row gap-2">
+      <AlertDialogFooter className="flex-row flex-wrap gap-2">
         <Button
-          variant="default"
+          variant="outline"
           size="smSubtext"
-          className="bg-primary flex-1 text-white"
-          onClick={onDelete}
-        >
-          Удалить
-        </Button>
-
-        <Button
-          variant="default"
-          size="smSubtext"
-          className="text-primary flex-1 bg-transparent"
+          className="text-primary border-primary desktop:flex-0 desktop:order-2 flex-1 bg-transparent"
           onClick={onClose}
         >
           Отмена
+        </Button>
+        <Button
+          variant="default"
+          size="smSubtext"
+          className="bg-primary desktop:flex-0 order-2 flex-1"
+          onClick={onDelete}
+        >
+          Удалить
         </Button>
       </AlertDialogFooter>
     </ModalDialog>

@@ -41,7 +41,7 @@ export async function loginByCodeAction(data: z.infer<typeof LoginByCodeSchema>)
       value: refresh,
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "lax",
       path: "/",
       maxAge: 60 * 60 * 24 * 30,
     });

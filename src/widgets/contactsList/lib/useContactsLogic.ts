@@ -21,18 +21,26 @@ export const useContactsLogic = ({
 }: UseContactsLogicProps) => {
   const isSearching = search.trim().length > 0;
 
+  // Сортировка контактов: сначала онлайн, затем по убыванию lastSeenAt
+  const sortedContacts = useMemo(() => {
+    return [...contacts].sort((a, b) => {
+      if (a.isOnline !== b.isOnline) return a.isOnline ? -1 : 1;
+      return (b.lastSeenAt ?? 0) - (a.lastSeenAt ?? 0);
+    });
+  }, [contacts]);
+
   // Фильтрация локальных контактов
   const filteredLocalContacts = useMemo(() => {
-    if (!isSearching) return contacts;
+    if (!isSearching) return sortedContacts;
     const query = search.toLowerCase();
-    return contacts.filter(
+    return sortedContacts.filter(
       (c) =>
         c.fullName?.toLowerCase().includes(query) ||
         c.phone.includes(query) ||
         c.nickname?.toLowerCase().includes(query) ||
         c.username?.toLowerCase().includes(query),
     );
-  }, [contacts, search, isSearching]);
+  }, [sortedContacts, search, isSearching]);
 
   // Фильтрация глобальных (исключаем тех, кто уже в контактах)
   const filteredGlobalUsers = useMemo(() => {

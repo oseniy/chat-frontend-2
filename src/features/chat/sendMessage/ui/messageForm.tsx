@@ -24,10 +24,12 @@ type MessageFormProps = {
   className?: string;
   onEmojiBtnClick?: () => void;
   onAttachBtnClick?: () => void;
+  onVoiceBtnClick?: () => void;
   onSubmitMessage: (message: string) => void;
   isKeyboardOpen: boolean;
   isAttachBtnDisabled?: boolean;
   isVoiceBtnDisabled?: boolean;
+  isAbleToSendWithoutText?: boolean;
   placeholder?: string;
   variant?: "main" | "modal";
 };
@@ -36,9 +38,11 @@ export const MessageForm: React.FC<MessageFormProps> = ({
   className,
   onAttachBtnClick,
   onSubmitMessage,
+  onVoiceBtnClick,
   isKeyboardOpen,
   isAttachBtnDisabled = false,
   isVoiceBtnDisabled = false,
+  isAbleToSendWithoutText = false,
   placeholder = "Сообщение",
   variant = "main",
 }) => {
@@ -81,7 +85,7 @@ export const MessageForm: React.FC<MessageFormProps> = ({
       <form
         className={cn("relative flex items-end px-4 py-3", className)}
         onSubmit={(e) => {
-          if (variant === "modal") {
+          if (isAbleToSendWithoutText || variant === "modal") {
             handleSubmit(e, true);
           } else {
             handleSubmit(e);
@@ -163,7 +167,7 @@ export const MessageForm: React.FC<MessageFormProps> = ({
         </InputGroup>
 
         <div className={cn(variant === "main" ? "h-11 pl-3" : "align-end flex pb-0.5 pl-3")}>
-          {textMessage.trim() || isVoiceBtnDisabled ? (
+          {textMessage.trim() || isVoiceBtnDisabled || isAbleToSendWithoutText ? (
             <Button
               variant="ghost"
               size="icon-auto"
@@ -173,7 +177,7 @@ export const MessageForm: React.FC<MessageFormProps> = ({
               <MessageSendBtn className={cn(variant === "main" ? "h-11 w-11" : "h-8 w-8")} />
             </Button>
           ) : (
-            <Button variant="ghost" size="icon-auto" type="button">
+            <Button variant="ghost" size="icon-auto" type="button" onClick={onVoiceBtnClick}>
               <VoiceMessage className="h-11 w-11" />
             </Button>
           )}

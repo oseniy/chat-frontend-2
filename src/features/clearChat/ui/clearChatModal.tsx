@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
+import { useState } from "react";
 
 import { ModalDialog } from "@/shared/modalDialog/ui/modalDialog";
 import { cn } from "@/shared/shadcn/lib/utils";
@@ -10,14 +11,16 @@ import {
   AlertDialogTitle,
 } from "@/shared/shadcn/ui/alert-dialog";
 import { Button } from "@/shared/shadcn/ui/button";
+import { Checkbox } from "@/shared/ui/checkbox";
 
 type ClearChatModalProps = {
   className?: string;
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (forAll: boolean) => void;
   chatName: string;
   modalVariant: "group" | "channel" | "chat";
+  isOwner?: boolean;
 };
 
 export const ClearChatModal: React.FC<ClearChatModalProps> = ({
@@ -27,7 +30,9 @@ export const ClearChatModal: React.FC<ClearChatModalProps> = ({
   onConfirm,
   chatName,
   modalVariant,
+  isOwner = false,
 }) => {
+  const [forAll, setForAll] = useState(false);
   const getModalContent = () => {
     switch (modalVariant) {
       case "group":
@@ -41,7 +46,7 @@ export const ClearChatModal: React.FC<ClearChatModalProps> = ({
         return {
           title: `Очистить канал «${chatName}»?`,
           description:
-            "Все публикации в этом канале будут безвозвратно удалены для всех. Это действие нельзя отменить.",
+            "Все публикации в этом канале будут удалены только для вас. Это действие нельзя отменить.",
           confirmLabel: "Очистить",
         };
       case "chat":
@@ -58,8 +63,8 @@ export const ClearChatModal: React.FC<ClearChatModalProps> = ({
 
   return (
     <ModalDialog className={cn(className)} open={isOpen} onOpenChange={onClose}>
-      <AlertDialogHeader>
-        <AlertDialogTitle>
+      <AlertDialogHeader className="min-w-0 overflow-hidden">
+        <AlertDialogTitle className="max-w-full truncate">
           <span className="font-medium">{content.title}</span>
         </AlertDialogTitle>
         {content.description && (
@@ -67,13 +72,22 @@ export const ClearChatModal: React.FC<ClearChatModalProps> = ({
             <span className="subtext text-gray">{content.description}</span>
           </AlertDialogDescription>
         )}
+        {isOwner && (
+          <div
+            className="mt-3 flex cursor-pointer items-center gap-2"
+            onClick={() => setForAll((v) => !v)}
+          >
+            <Checkbox checked={forAll} />
+            <span>Очистить у всех</span>
+          </div>
+        )}
       </AlertDialogHeader>
       <AlertDialogFooter className="flex-row flex-wrap gap-2">
         <Button
           variant="default"
           size="smSubtext"
           className="desktop:text-error desktop:bg-transparent bg-primary desktop:flex-0 desktop:order-1 order-2 flex-1 text-white"
-          onClick={onConfirm}
+          onClick={() => onConfirm(forAll)}
         >
           {content.confirmLabel}
         </Button>

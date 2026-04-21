@@ -17,6 +17,11 @@ export interface MappedChatMessage {
   chatId: string | null;
   chatKey: string;
   chatType: ChatType;
+  isForwarded?: boolean;
+  forwardedAuthors?: string[];
+  avatar: string | null;
+  forwardedChatId?: string | null;
+  forwardedUid?: string | null;
   messageRtc: CallInfo | null;
 
   status?: SendingStatus;
@@ -42,6 +47,7 @@ export interface MappedMessageFile {
   file?: string | File;
   fileUrl: string;
   fileWebp: string | null;
+  name?: string;
   fileWebpUrl: string | undefined;
   fileType: string | null;
   isNew?: boolean;

@@ -1,15 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-const protectedRoutes = ["/chats", "/auth/success", "settings"];
-const authRoutes = [
-  "/auth",
-  "/auth/phone",
-  "/auth/code",
-  "/auth/support",
-  "/auth/support/success",
-  "/auth/user",
-];
+const protectedRoutes = ["/chats", "/auth/success", "/settings"];
+const authRoutes = ["/auth", "/auth/phone", "/auth/support", "/auth/support/success", "/auth/user"];
 
 // Минимальный парсер JWT для проверки срока жизни (exp)
 function isTokenExpired(token: string): boolean {
@@ -48,6 +41,14 @@ async function refreshTokens(refreshToken: string) {
   }
 }
 
+const createRedirectWithCookies = (url: URL, source: NextResponse): NextResponse => {
+  const redirect = NextResponse.redirect(url);
+  source.cookies.getAll().forEach((cookie) => {
+    redirect.cookies.set(cookie);
+  });
+  return redirect;
+};
+
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   let accessToken = request.cookies.get("accessToken")?.value;
@@ -69,7 +70,13 @@ export async function proxy(request: NextRequest) {
       // Устанавливаем новые куки в ОТВЕТ (чтобы браузер их запомнил)
       response.cookies.set("accessToken", newTokens.access, { httpOnly: false });
       if (newTokens.refresh) {
-        response.cookies.set("refresh_token", newTokens.refresh, { httpOnly: true });
+        response.cookies.set("refresh_token", newTokens.refresh, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 60 * 60 * 24 * 30,
+        });
       }
 
       // КРИТИЧЕСКИ ВАЖНО: Устанавливаем токен в ЗАПРОС,
@@ -92,18 +99,18 @@ export async function proxy(request: NextRequest) {
   if (isProtectedRoute && !refreshToken) {
     const url = new URL("/auth", request.url);
     url.searchParams.set("from", path);
-    return NextResponse.redirect(url);
+    return createRedirectWithCookies(url, response);
   }
 
   // 1a. Пользователь авторизован, но профиль не заполнен → редирект на страницу заполнения
   if (isProtectedRoute && refreshToken && !isFilled) {
-    return NextResponse.redirect(new URL("/auth/user", request.url));
+    return createRedirectWithCookies(new URL("/auth/user", request.url), response);
   }
 
   // 2. Перенаправление авторизованных пользователей с auth-страниц
   if (isAuthRoute && refreshToken && isFilled) {
     const redirectTo = request.nextUrl.searchParams.get("from") || "/chats";
-    return NextResponse.redirect(new URL(redirectTo, request.url));
+    return createRedirectWithCookies(new URL(redirectTo, request.url), response);
   }
 
   return response;
@@ -111,7 +118,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
+    "/((?!api|_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
   ],
 };

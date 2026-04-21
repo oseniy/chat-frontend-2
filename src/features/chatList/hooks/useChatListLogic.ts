@@ -14,7 +14,6 @@ export const useChatList = (search: string) => {
       order: s.order,
     })),
   );
-
   const chats = useMemo(() => order.map((id) => chatsById[id]).filter(Boolean), [order, chatsById]);
 
   const filtered = useMemo(() => filterChats(chats, search), [chats, search]);

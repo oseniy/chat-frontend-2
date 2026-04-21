@@ -14,10 +14,10 @@ import { useAnothersProfileUIStore } from "../model/anothersProfileUIStore";
 export const useProfileClose = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { isMainActive, toggleIsMainActive } = useAnothersProfileUIStore(
+  const { activeSection, setActiveSection } = useAnothersProfileUIStore(
     useShallow((s) => ({
-      isMainActive: s.isMainActive,
-      toggleIsMainActive: s.toggleIsMainActive,
+      activeSection: s.activeSection,
+      setActiveSection: s.setActiveSection,
     })),
   );
 
@@ -27,11 +27,20 @@ export const useProfileClose = () => {
       return;
     }
 
-    if (isMainActive) {
+    if (activeSection === "main") {
       // Парсим pathname: /chats/{chatKey}/profile -> /chats/{chatKey}
       const pathParts = pathname.split("/").filter(Boolean);
 
       if (pathParts[0] === "chats" && pathParts.length === 3 && pathParts[2] === "profile") {
+        const chatKey = pathParts[1];
+        router.push(`/chats/${chatKey}`);
+      } else if (
+        pathParts[0] === "chats" &&
+        pathParts.length === 5 &&
+        pathParts[2] === "participant" &&
+        pathParts[4] === "profile"
+      ) {
+        // /chats/{chatKey}/participant/{participantUid}/profile -> /chats/{chatKey}
         const chatKey = pathParts[1];
         router.push(`/chats/${chatKey}`);
       } else {
@@ -39,9 +48,9 @@ export const useProfileClose = () => {
         router.back();
       }
     } else {
-      toggleIsMainActive();
+      setActiveSection("main");
     }
-  }, [pathname, router, isMainActive, toggleIsMainActive]);
+  }, [pathname, router, activeSection, setActiveSection]);
 
   return closeProfile;
 };

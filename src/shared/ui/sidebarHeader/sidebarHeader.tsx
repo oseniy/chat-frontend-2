@@ -2,6 +2,7 @@
 import Close from "@icons/close.svg";
 import BackArrow from "@icons/menu/back-arrow.svg";
 import More from "@icons/more.svg";
+import Settings from "@icons/navBar/desktop/settings.svg";
 import { useRouter } from "next/navigation";
 import { MouseEvent } from "react";
 
@@ -13,19 +14,23 @@ type SidebarHeaderProps = {
   title: string;
   backButton?: boolean;
   closeButton?: boolean;
+  settings?: boolean;
   backButtonFn?: () => void;
   closeButtonFn?: () => void;
   contextMenu?: { onContextMenu: (e: MouseEvent) => void; isOpen: boolean };
+  onSettingsClick?: () => void;
 };
 
 export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
   className,
   title,
   backButton,
+  settings,
   backButtonFn,
   closeButton,
   closeButtonFn,
   contextMenu,
+  onSettingsClick,
 }) => {
   const router = useRouter();
   const onBackClick = backButtonFn || (() => router.back());
@@ -64,7 +69,12 @@ export const SidebarHeader: React.FC<SidebarHeaderProps> = ({
         </h2>
       </div>
       {contextMenu && (
-        <div className="flex gap-4">
+        <div className="flex gap-2">
+          {settings && (
+            <Button variant="ghost" size="icon-auto" onClick={onSettingsClick}>
+              <Settings className="text-primary h-6 w-6" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon-auto" onClick={contextMenu.onContextMenu}>
             <More className="text-primary h-6 w-6" />
           </Button>

@@ -8,13 +8,13 @@ export const useParticipantsQuery = (
   initialData?: ChatParticipantListResponse | null,
 ) => {
   return useInfiniteQuery({
-    queryKey: ["participants"],
+    queryKey: ["participants", chatKey],
     queryFn: ({ pageParam }) => getParticipants(chatKey, pageParam),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.next ?? undefined,
     // Если данные пришли с сервера, используем их для мгновенной отрисовки
     initialData: initialData ? { pages: [initialData], pageParams: [undefined] } : undefined,
     retry: 1,
-    staleTime: 1000 * 60,
+    staleTime: 1000 * 30,
   });
 };

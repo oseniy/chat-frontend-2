@@ -6,6 +6,7 @@ type Props = {
 };
 
 export const ChatListContainer = ({ search }: Props) => {
+  const isSearch = search ? true : false;
   return (
     <div className="flex flex-col">
       <ChatListDataProvider search={search}>
@@ -15,7 +16,7 @@ export const ChatListContainer = ({ search }: Props) => {
 
           return (
             <>
-              <ChatList chats={chats} />
+              <ChatList chats={chats} isSearch={isSearch} />
               <div ref={loadMoreRef} />
               {isFetchingNextPage && (
                 <div className="p-2 text-center text-sm opacity-60">Загрузка...</div>

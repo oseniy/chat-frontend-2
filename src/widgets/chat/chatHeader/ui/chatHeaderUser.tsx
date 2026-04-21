@@ -1,6 +1,8 @@
 import Image from "next/image";
 
 import { ChatType } from "@/features/chat/chat/model/types/serverTypes";
+import { cn } from "@/shared/shadcn/lib/utils";
+import ChatPhoto from "@/shared/ui/icons/chat/header/chatPhoto.svg";
 import ProfilePhoto from "@/shared/ui/icons/chat/header/profilePhoto.svg";
 import { Statusbar } from "@/shared/ui/statusbar/ui/statusbar";
 
@@ -11,6 +13,7 @@ type Props = {
   membersCount?: number;
   chatType: ChatType;
   photo: string | null;
+  isInfoHidden?: boolean;
 };
 
 export const ChatHeaderUser = ({
@@ -20,19 +23,32 @@ export const ChatHeaderUser = ({
   isOnline,
   chatType,
   membersCount,
+  isInfoHidden,
 }: Props) => {
   return (
-    <div className="border-light-gray desktop:border-none flex h-[60px] min-w-0 flex-1 items-center gap-3 border-b">
+    <div
+      className={cn(
+        "border-light-gray desktop:border-none flex h-[60px] min-w-0 flex-1 items-center gap-3 border-b pr-3",
+        isInfoHidden && "border-none",
+      )}
+    >
       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full">
         {photo ? (
           <Image src={photo} alt="profile" fill className="object-cover" />
-        ) : (
+        ) : chatType === "chat" ? (
           <ProfilePhoto className="text-primary h-10 w-10" />
+        ) : (
+          <ChatPhoto className="text-primary h-10 w-10" />
         )}
       </div>
 
-      <button className="flex min-w-0 cursor-pointer flex-col text-left">
-        <p className="desktop:text-lg truncate text-sm font-medium">{name}</p>
+      <button
+        className={cn(
+          "flex w-full min-w-0 cursor-pointer flex-col text-left",
+          isInfoHidden && "hidden",
+        )}
+      >
+        <p className="desktop:text-lg truncate text-sm leading-5 font-medium">{name}</p>
         <Statusbar
           time={wasOnlineAt || null}
           isOnline={isOnline || null}

@@ -44,8 +44,7 @@ export const useChatListActions = () => {
         index: prev.id,
         notifications: !prev.notificationsEnabled,
       });
-    } catch (e) {
-      console.log(e);
+    } catch {
       upsertChat(prev);
     }
   };

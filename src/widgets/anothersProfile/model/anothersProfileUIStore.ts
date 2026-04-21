@@ -2,10 +2,10 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 
 interface AnothersProfileUIState {
-  isMainActive: boolean;
-  activeSection: "participants" | "media" | "files" | "voices" | "links";
-  toggleIsMainActive: () => void;
-  setActiveSection: (section: "participants" | "media" | "files" | "voices" | "links") => void;
+  activeSection: "main" | "tab" | "settings" | "invite";
+  activeTab: "participants" | "media" | "files" | "voices" | "links" | "settings";
+  setActiveSection: (section: "main" | "tab" | "settings" | "invite") => void;
+  setActiveTab: (tab: "participants" | "media" | "files" | "voices" | "links" | "settings") => void;
   reset: () => void;
 }
 
@@ -14,14 +14,8 @@ export const useAnothersProfileUIStore = create<AnothersProfileUIState>()(
   devtools(
     (set) => ({
       isMainActive: true,
-      activeSection: "participants",
-
-      toggleIsMainActive: () =>
-        set(
-          (state) => ({ isMainActive: !state.isMainActive }),
-          false,
-          "toggleIsMainActive", // Название экшена для DevTools
-        ),
+      activeSection: "main",
+      activeTab: "participants",
 
       setActiveSection: (section) =>
         set(
@@ -30,9 +24,16 @@ export const useAnothersProfileUIStore = create<AnothersProfileUIState>()(
           "setActiveSection", // Название экшена для DevTools
         ),
 
+      setActiveTab: (tab) =>
+        set(
+          { activeTab: tab },
+          false,
+          "setActiveSection", // Название экшена для DevTools
+        ),
+
       reset: () =>
         set(
-          { isMainActive: true, activeSection: "participants" },
+          { activeSection: "main", activeTab: "participants" },
           false,
           "reset", // Название экшена для DevTools
         ),

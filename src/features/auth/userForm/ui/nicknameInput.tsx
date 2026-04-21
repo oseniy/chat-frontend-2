@@ -24,6 +24,7 @@ export const NicknameInput: React.FC<NicknameInputProps> = ({
   const {
     register,
     watch,
+    setValue,
     setError,
     clearErrors,
     formState: { errors },
@@ -51,7 +52,7 @@ export const NicknameInput: React.FC<NicknameInputProps> = ({
           message: result.error,
         });
       } else {
-        clearErrors(name);
+        // clearErrors(name);
       }
     }, 500);
 
@@ -62,12 +63,21 @@ export const NicknameInput: React.FC<NicknameInputProps> = ({
     };
   }, [nickname, name, setError, clearErrors]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const trimmedValue = value.replace(/\s/g, "");
+
+    setValue(name, trimmedValue, { shouldValidate: true });
+  };
+
   return (
     <FormInput
       id={name}
       label={label}
       error={errors[name]?.message}
-      {...register(name)}
+      {...register(name, {
+        onChange: handleChange,
+      })}
       inputClassName={cn(!isBordered && "desktop:border-0 font-normal")}
     />
   );

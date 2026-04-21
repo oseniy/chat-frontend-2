@@ -1,8 +1,10 @@
 import { create } from "zustand";
 
-export type PendingImage = {
+import { BasePendingAttachment } from "../types/types";
+
+export type PendingImage = BasePendingAttachment & {
   id: number;
-  file: File;
+  type: string;
   previewUrl: string;
 };
 
@@ -31,6 +33,7 @@ export const useSendImageStore = create<SendImageState>((set) => ({
       const mapped = nextFiles.map((file) => ({
         id: Date.now() + Math.random(),
         file,
+        type: file.type,
         previewUrl: URL.createObjectURL(file),
       }));
 

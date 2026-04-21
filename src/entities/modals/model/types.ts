@@ -1,3 +1,5 @@
+import { ChatPreview } from "@/entities/chat/model/types";
+
 export type ModalPayloads = {
   deleteChat: { chatKey: string };
   deleteMessage: { messageId: string; chatKey: string; chatKeyUser?: string };
@@ -14,11 +16,27 @@ export type ModalPayloads = {
   clearChat: {
     chatName: string;
     modalVariant: "channel" | "group" | "chat";
-    onConfirm: () => void;
+    onConfirm: (forAll: boolean) => void;
+    isOwner?: boolean;
   };
   sendImage: { chatKey: string };
   sendFile: { chatKey: string };
-  forward: { messageId: number; chatKey: string };
+  forward: { chatKey: string };
+  removeParticipant: {
+    participantName: string;
+    chatKey: string;
+    participantUid: string;
+  };
+  chatPreview: {
+    chatKey: string;
+    token: string;
+    previewData: ChatPreview;
+  };
+  makeAdmin: {
+    participantName: string;
+    chatKey: string;
+    participantUid: string;
+  };
   //новые модалки здесь
 };
 

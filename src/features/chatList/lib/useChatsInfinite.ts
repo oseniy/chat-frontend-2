@@ -1,7 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import { mapChatList } from "@/entities/chat/model/mapper";
+import { mapChatList } from "@/entities/chat/model/mappers";
 
 import { getChatList } from "../api/getChatList";
 import { useChatListStore } from "../model/useChatListStore";
@@ -9,6 +9,7 @@ import { useChatListStore } from "../model/useChatListStore";
 export const useChatsInfinite = () => {
   const mergeChats = useChatListStore((s) => s.mergeChats);
   const setCount = useChatListStore((s) => s.setCount);
+  const lastMergedAt = useChatListStore((s) => s.lastMergedAt);
 
   const query = useInfiniteQuery({
     queryKey: ["chats"],
@@ -18,7 +19,7 @@ export const useChatsInfinite = () => {
   });
 
   useEffect(() => {
-    if (!query.data) return;
+    if (!query.data || query.dataUpdatedAt <= lastMergedAt) return;
 
     const pages = query.data.pages;
     if (!pages.length) return;
@@ -27,10 +28,12 @@ export const useChatsInfinite = () => {
     const mappedChats = mapChatList(lastPage.results);
     mergeChats(mappedChats);
 
+    useChatListStore.setState({ lastMergedAt: query.dataUpdatedAt });
+
     if (pages.length === 1 && typeof lastPage.count === "number") {
       setCount(lastPage.count);
     }
-  }, [query.data?.pages.length]);
+  }, [query.data?.pages.length, query.dataUpdatedAt]);
 
   return query;
 };

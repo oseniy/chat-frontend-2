@@ -1,33 +1,37 @@
 import { useMemo, useState } from "react";
 
-import { useParticipantsSync } from "@/entities/chat/lib/useParticipantsSync";
+import { useParticipants } from "@/entities/chat/lib/useParticipants";
 import { ChatParticipantListResponse } from "@/entities/chat/model/types";
-import { useParticipantsStore } from "@/entities/chat/model/useParticipantsStore";
-import { ContactCard } from "@/entities/contact/ui/contactCard";
-import { InviteToChatBtn } from "@/features/inviteToChat/ui/inviteToChatBtn";
+import { ToInvitePageBtn } from "@/features/inviteToChat/ui/toInvitePageBtn";
 import { useInfiniteScroll } from "@/shared/lib/useInfiniteScroll";
-import { cn } from "@/shared/shadcn/lib/utils";
 import { Searchbar } from "@/shared/ui/searchbar";
 
 import { filterParticipants } from "../../lib/filterParticipants";
+import { ParticipantCard } from "../participantCard";
 
 type ParticipantsPageProps = {
   className?: string;
   chatKey: string;
   initialParticipants: ChatParticipantListResponse | null;
+  chatType: "group" | "channel" | "chat";
+  canInvite: boolean;
+  isOwner: boolean;
 };
 
 export const ParticipantsPage: React.FC<ParticipantsPageProps> = ({
   className,
   initialParticipants,
   chatKey,
+  chatType,
+  canInvite,
+  isOwner,
 }) => {
   const [search, setSearch] = useState("");
-  const { fetchNextPage, hasNextPage, isFetchingNextPage } = useParticipantsSync(
+  const { participants, fetchNextPage, hasNextPage, isFetchingNextPage } = useParticipants(
     chatKey,
     initialParticipants,
   );
-  const participants = useParticipantsStore((s) => s.participants);
+
   const loadMoreRef = useInfiniteScroll({
     hasNextPage,
     isFetchingNextPage,
@@ -38,32 +42,48 @@ export const ParticipantsPage: React.FC<ParticipantsPageProps> = ({
   return (
     <div className="flex w-full flex-col p-2">
       <div className="flex w-full flex-col items-start gap-4 p-2">
-        <InviteToChatBtn />
+        {canInvite && <ToInvitePageBtn chatType={chatType} />}
         <Searchbar className="w-full" value={search} onChange={setSearch} />
       </div>
       {search ? (
         filtered.map((p, index) => (
-          <div className={cn("", className)} key={index}>
-            <ContactCard contact={p} isLast={index === filtered.length - 1} />
-          </div>
+          <ParticipantCard
+            key={p.uid}
+            participant={p}
+            chatKey={chatKey}
+            isLast={index === filtered.length - 1}
+            isOwner={isOwner && !p.isOwner}
+            className={className}
+          />
         ))
       ) : (
         <>
           {participants.length > 0 && (
             <>
               <p className="text-gray minitext p-3">Владелец</p>
-              <div className={cn("", className)}>
-                <ContactCard contact={participants[0]} isLast={participants.length === 1} />
-              </div>
+              <ParticipantCard
+                participant={participants[0]}
+                chatKey={chatKey}
+                isLast={participants.length === 1}
+                isOwner={false}
+                className={className}
+              />
             </>
           )}
           {participants.length > 1 && (
             <>
-              <p className="text-gray minitext p-3">Участники</p>
+              <p className="text-gray minitext p-3">
+                {chatType === "group" ? "Участники" : "Подписчики"}
+              </p>
               {participants.slice(1).map((p, index) => (
-                <div className={cn("", className)} key={index + 1}>
-                  <ContactCard contact={p} isLast={index + 1 === participants.length - 1} />
-                </div>
+                <ParticipantCard
+                  key={p.uid}
+                  participant={p}
+                  chatKey={chatKey}
+                  isLast={index + 1 === participants.length - 1}
+                  isOwner={isOwner}
+                  className={className}
+                />
               ))}
             </>
           )}

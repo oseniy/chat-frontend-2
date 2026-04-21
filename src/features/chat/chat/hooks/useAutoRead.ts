@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import { sendReadStatus } from "@/entities/chat/api/sendReadStatus";
+import { setChatList } from "@/features/chatList/api/setChatList";
+import { useChatListStore } from "@/features/chatList/model/useChatListStore";
 
 import { AUTO_READ_CONFIG } from "../lib/constants";
 import { MappedChatMessage } from "../model/types/mappedTypes";
@@ -33,35 +35,66 @@ export const useAutoRead = ({
   scrollContainerRef,
 }: UseAutoReadProps): UseAutoReadReturn => {
   const observerRef = useRef<IntersectionObserver | null>(null);
+
   const processedUIDsRef = useRef<Set<string>>(new Set());
+  const observedElementsRef = useRef<Map<string, Element>>(new Map());
+
   const batchQueueRef = useRef<BatchItem[]>([]);
   const batchTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  const lastSeenMessageIdRef = useRef<number | null>(null);
+  const lastSeenTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const chatIdRef = useRef<number | null>(null);
+
+  const decrementUnread = useChatListStore((s) => s.decrementUnread);
+
+  /**
+   * flush read status batch
+   */
   const flushBatch = useCallback(async () => {
     if (batchQueueRef.current.length === 0) return;
 
     const batch = [...batchQueueRef.current];
     batchQueueRef.current = [];
 
-    // Выполняем все запросы параллельно и собираем ошибки
     const results = await Promise.allSettled(
       batch.map(async ({ chatKey, messageUid }) => {
-        await sendReadStatus({ chatKey, idOrUid: messageUid });
+        await sendReadStatus({
+          chatKey,
+          idOrUid: messageUid,
+        });
+
         processedUIDsRef.current.add(messageUid);
-        return { success: true, messageUid };
       }),
     );
 
-    // Логируем ошибки, если есть
-    const errors = results.filter(
-      (result): result is PromiseRejectedResult => result.status === "rejected",
-    );
-    if (errors.length > 0) {
-      console.error(`Ошибки прочтения сообщений: ${errors.length} из ${batch.length}`, errors);
+    const errors = results.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+
+    if (errors.length) {
+      console.error(`Read errors ${errors.length}/${batch.length}`, errors);
     }
   }, []);
 
-  // Обработка видимого сообщения
+  /**
+   * update last seen cursor
+   */
+  const flushLastSeen = useCallback(async () => {
+    if (!lastSeenMessageIdRef.current || !chatIdRef.current) return;
+
+    try {
+      await setChatList({
+        index: chatIdRef.current,
+        last_seen_message: lastSeenMessageIdRef.current,
+      });
+    } catch (error) {
+      console.error("Failed updating last_seen_message", error);
+    }
+  }, []);
+
+  /**
+   * intersection handler
+   */
   const handleIntersection = useCallback(
     (entries: IntersectionObserverEntry[]) => {
       if (!autoReadEnabled) return;
@@ -70,28 +103,56 @@ export const useAutoRead = ({
         if (!entry.isIntersecting) return;
 
         const element = entry.target as HTMLElement;
-        const messageUid = element.getAttribute("data-message-uid");
-        const chatKey = element.getAttribute("data-chat-key");
-        const isFromCurrentUser = element.getAttribute("data-is-from-current-user") === "true";
-        const isNew = element.getAttribute("data-is-new") === "true";
 
-        if (!messageUid || !chatKey) return;
+        const messageUid = element.dataset.messageUid;
+        const messageId = element.dataset.messageId;
+        const chatKey = element.dataset.chatKey;
+        const chatId = element.dataset.chatId;
+
+        const isFromCurrentUser = element.dataset.isFromCurrentUser === "true";
+
+        const isNew = element.dataset.isNew === "true";
+
+        if (!messageUid || !messageId || !chatKey || !chatId) return;
         if (isFromCurrentUser || !isNew) return;
         if (processedUIDsRef.current.has(messageUid)) return;
 
-        processedUIDsRef.current.add(messageUid);
-        batchQueueRef.current.push({ chatKey, messageUid });
+        chatIdRef.current = Number(chatId);
+
+        /**
+         * add read status to batch
+         */
+        batchQueueRef.current.push({
+          chatKey,
+          messageUid,
+        });
+
+        decrementUnread(chatKey);
 
         if (batchTimerRef.current) {
           clearTimeout(batchTimerRef.current);
         }
+
         batchTimerRef.current = setTimeout(flushBatch, batchDelay);
+
+        /**
+         * update last seen cursor
+         */
+        lastSeenMessageIdRef.current = Number(messageId);
+
+        if (lastSeenTimerRef.current) {
+          clearTimeout(lastSeenTimerRef.current);
+        }
+
+        lastSeenTimerRef.current = setTimeout(flushLastSeen, batchDelay);
       });
     },
-    [autoReadEnabled, batchDelay, flushBatch],
+    [autoReadEnabled, batchDelay, flushBatch, flushLastSeen, decrementUnread],
   );
 
-  // Инициализация observer один раз
+  /**
+   * init observer
+   */
   useEffect(() => {
     if (!scrollContainerRef.current) return;
 
@@ -103,25 +164,42 @@ export const useAutoRead = ({
 
     return () => {
       observerRef.current?.disconnect();
-      if (batchTimerRef.current) {
-        clearTimeout(batchTimerRef.current);
-      }
+
+      if (batchTimerRef.current) clearTimeout(batchTimerRef.current);
+      if (lastSeenTimerRef.current) clearTimeout(lastSeenTimerRef.current);
     };
   }, [handleIntersection, readThreshold, readRootMargin, scrollContainerRef]);
 
-  // Обновление наблюдаемых элементов
+  /**
+   * observe message elements
+   */
   useEffect(() => {
-    if (!observerRef.current || !scrollContainerRef.current) return;
-
     const observer = observerRef.current;
+    const root = scrollContainerRef.current;
 
-    // Наблюдаем за всеми сообщениями с data-message-uid
-    const elements = scrollContainerRef.current.querySelectorAll("[data-message-uid]");
-    elements.forEach((el) => observer.observe(el));
+    if (!observer || !root) return;
 
-    return () => {
-      observer.disconnect();
-    };
+    const elements = root.querySelectorAll("[data-message-uid]");
+
+    elements.forEach((el) => {
+      const uid = (el as HTMLElement).dataset.messageUid;
+
+      if (!uid) return;
+      if (observedElementsRef.current.has(uid)) return;
+
+      observer.observe(el);
+      observedElementsRef.current.set(uid, el);
+    });
+
+    /**
+     * cleanup removed nodes
+     */
+    observedElementsRef.current.forEach((element, uid) => {
+      if (!document.body.contains(element)) {
+        observer.unobserve(element);
+        observedElementsRef.current.delete(uid);
+      }
+    });
   }, [messages, scrollContainerRef]);
 
   return {

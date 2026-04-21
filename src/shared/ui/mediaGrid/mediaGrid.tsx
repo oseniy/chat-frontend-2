@@ -18,6 +18,7 @@ export type FileItem = {
   type: string;
   src: string;
   title?: string;
+  fileType?: string;
   duration?: number;
 };
 
@@ -32,7 +33,7 @@ type MediaGridProps = {
 
 const sizes = {
   sendImageModal: "destkop:w-[384px] desktop:max-w-[384px] w-full max-w-full",
-  standart: "desktop:w-[500px] desktop:max-w-[500px] w-[228px] max-w-[228px]",
+  standart: "desktop:w-full desktop:min-w-[288px] desktop:max-w-[500px] w-[228px] max-w-[228px]",
 };
 
 export const MediaGrid: React.FC<MediaGridProps> = ({
