@@ -53,8 +53,11 @@ export const sendOfferCall = (
 
 export const sendAnswerCall = (
   payload: AnswerCallRequest,
-): Promise<WSBaseResponse<CallAnswerResponse>> =>
-  sendWSRequest<WSBaseResponse<CallAnswerResponse>>(CALL_WS_ACTIONS.ANSWER, payload);
+): Promise<WSBaseResponse<CallAnswerResponse>> => {
+  console.log("payload from sendAnswerCall: ", payload);
+
+  return sendWSRequest<WSBaseResponse<CallAnswerResponse>>(CALL_WS_ACTIONS.ANSWER, payload);
+};
 
 export const sendIceCandidate = async (payload: IceCandidateRequest): Promise<void> => {
   try {

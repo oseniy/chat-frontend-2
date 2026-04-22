@@ -1,6 +1,5 @@
 import { useUserStore } from "@/entities/user/model/userStore";
 import { WSHandler } from "@/shared/api/ws/model/types";
-import { registerWSHandler } from "@/shared/api/ws/wsHandlers";
 
 import {
   handleRemoteAnswer,
@@ -9,7 +8,7 @@ import {
   handleRemoteStateUpdate,
   registerIncomingOffer,
 } from "../lib/callEngine";
-import { CALL_WS_ACTIONS } from "../lib/constants";
+import { useCallStore } from "../model/callStore";
 import {
   CallAnswerResponse,
   CallCompletionResponse,
@@ -18,7 +17,7 @@ import {
   CallStateUpdateResponse,
 } from "../model/types";
 
-const onOffer: WSHandler<CallOfferResponse> = (data) => {
+export const onOffer: WSHandler<CallOfferResponse> = (data) => {
   if (!data.object) return;
   const ownerUid = useUserStore.getState().userId;
   if (!ownerUid) return;
@@ -26,34 +25,31 @@ const onOffer: WSHandler<CallOfferResponse> = (data) => {
   registerIncomingOffer(data.object, ownerUid);
 };
 
-const onAnswer: WSHandler<CallAnswerResponse> = (data) => {
+export const onAnswer: WSHandler<CallAnswerResponse> = (data) => {
   if (!data.object) return;
-  const ownerUid = useUserStore.getState().userId;
-  if (ownerUid && data.object.from_user === ownerUid) return;
+  // В answer_call поля from_user/to_user описывают НАПРАВЛЕНИЕ звонка
+  // (from_user = инициатор, to_user = принимающий), а не отправителя этого
+  // сообщения. Поэтому фильтровать эхо через `from_user === me` нельзя —
+  // оно прилетает обратно и принимающему, и инициатору с одними и теми же
+  // значениями. Answer имеет смысл применять только инициатору звонка.
+  const session = useCallStore.getState().session;
+  if (!session || !session.isCaller) return;
   void handleRemoteAnswer(data.object);
 };
 
-const onIce: WSHandler<CallIceCandidateResponse> = (data) => {
+export const onIce: WSHandler<CallIceCandidateResponse> = (data) => {
   if (!data.object) return;
   const ownerUid = useUserStore.getState().userId;
   if (ownerUid && data.object.uid_user_owner_candidate === ownerUid) return;
   void handleRemoteIce(data.object);
 };
 
-const onCompletion: WSHandler<CallCompletionResponse> = (data) => {
+export const onCompletion: WSHandler<CallCompletionResponse> = (data) => {
   if (!data.object) return;
   handleRemoteCompletion(data.object);
 };
 
-const onStateUpdate: WSHandler<CallStateUpdateResponse> = (data) => {
+export const onStateUpdate: WSHandler<CallStateUpdateResponse> = (data) => {
   if (!data.object) return;
   handleRemoteStateUpdate(data.object);
-};
-
-export const bootstrapCallWSHandlers = () => {
-  registerWSHandler(CALL_WS_ACTIONS.OFFER, onOffer as WSHandler);
-  registerWSHandler(CALL_WS_ACTIONS.ANSWER, onAnswer as WSHandler);
-  registerWSHandler(CALL_WS_ACTIONS.ICE, onIce as WSHandler);
-  registerWSHandler(CALL_WS_ACTIONS.COMPLETION, onCompletion as WSHandler);
-  registerWSHandler(CALL_WS_ACTIONS.STATE_UPDATE, onStateUpdate as WSHandler);
 };

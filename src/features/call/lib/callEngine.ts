@@ -99,6 +99,8 @@ const closePeerConnection = () => {
 };
 
 const cleanup = () => {
+  console.log("cleanup");
+
   closePeerConnection();
   stopLocalStream();
   stopRemoteStream();
@@ -358,6 +360,8 @@ export const startOutgoingCall = async (opts: {
  * после принятия — чтобы не дёргать микрофон впустую.
  */
 export const registerIncomingOffer = (payload: CallOfferResponse, ownerUid: string) => {
+  console.log("registerIncomingOffer");
+
   const store = useCallStore.getState();
   const messageRtcUid = payload.message_rtc?.uid;
   if (!messageRtcUid) return;
@@ -407,7 +411,9 @@ export const registerIncomingOffer = (payload: CallOfferResponse, ownerUid: stri
 };
 
 export const acceptIncomingCall = async () => {
+  console.log("acceptIncomingCall");
   const incoming = pendingIncoming;
+  console.log("incoming: ", incoming);
   if (!incoming) return;
   const store = useCallStore.getState();
 
@@ -438,21 +444,21 @@ export const acceptIncomingCall = async () => {
     await pc.setRemoteDescription({ type: "offer", sdp: incoming.offerSdp });
     isRemoteDescriptionSet = true;
     await flushPendingRemoteIce();
-
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
     pendingIncoming = null;
     store.setStatus("connecting");
-
     const response = await sendAnswerCall({
-      from_user_uid: incoming.ownerUid,
-      to_user_uid: incoming.peerUid,
+      from_user_uid: incoming.peerUid,
+      to_user_uid: incoming.ownerUid,
       message_rtc_uid: incoming.messageRtcUid,
       answer_sdp: answer.sdp ?? "",
     });
-
     if (response.status === "ERROR" || response.error) {
+      console.log("log from if block");
+      console.log("error: ", response.error);
+
       throw new Error(response.error || "answer rejected");
     }
 
@@ -505,6 +511,10 @@ export const hangupCall = () => {
 
 export const handleRemoteAnswer = async (payload: CallAnswerResponse) => {
   if (!pc || payload.message_rtc_uid !== currentMessageRtcUid) return;
+  // Answer имеет смысл применять только когда мы уже отправили offer
+  // и ждём удалённый answer. В любом другом состоянии (stable, have-remote-offer,
+  // closed и т.д.) setRemoteDescription({type:"answer"}) завершится ошибкой.
+  if (pc.signalingState !== "have-local-offer") return;
   try {
     await pc.setRemoteDescription({ type: "answer", sdp: payload.answer_sdp });
     isRemoteDescriptionSet = true;

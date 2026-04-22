@@ -1,6 +1,13 @@
 import { handleEditChat } from "@/entities/chat/api/ws/editChatHandler";
 import { handleNewStatusUser } from "@/entities/user/api/ws/newStatusUserHandler";
-import { bootstrapCallWSHandlers } from "@/features/call/api/callWsHandlers";
+import {
+  onAnswer,
+  onCompletion,
+  onIce,
+  onOffer,
+  onStateUpdate,
+} from "@/features/call/api/callWsHandlers";
+import { CALL_WS_ACTIONS } from "@/features/call/lib/constants";
 import {
   handleCreateTextMessage,
   handleDeleteMessage,
@@ -16,6 +23,7 @@ import { handleOwnerTransferred } from "@/features/makeAdmin/api/handleOwnerTran
 import { handleRemoveParticipants } from "@/features/removeParticipant/api/handleRemoveParticipants";
 import { WS_ACTIONS } from "@/shared/constants/constants";
 
+import { WSHandler } from "./model/types";
 import { registerWSHandler } from "./wsHandlers";
 
 export const bootstrapWSHandlers = () => {
@@ -45,5 +53,11 @@ export const bootstrapWSHandlers = () => {
 
   registerWSHandler(WS_ACTIONS.NEW_STATUS_USER, handleNewStatusUser);
 
-  bootstrapCallWSHandlers();
+  registerWSHandler(CALL_WS_ACTIONS.OFFER, onOffer as WSHandler);
+  registerWSHandler(CALL_WS_ACTIONS.ICE, onIce as WSHandler);
+  registerWSHandler(CALL_WS_ACTIONS.ANSWER, onAnswer as WSHandler);
+  registerWSHandler(CALL_WS_ACTIONS.COMPLETION, onCompletion as WSHandler);
+  registerWSHandler(CALL_WS_ACTIONS.STATE_UPDATE, onStateUpdate as WSHandler);
+
+  // bootstrapCallWSHandlers();
 };
