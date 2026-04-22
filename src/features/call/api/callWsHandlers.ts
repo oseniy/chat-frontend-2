@@ -4,57 +4,56 @@ import { registerWSHandler } from "@/shared/api/ws/wsHandlers";
 
 import {
   handleRemoteAnswer,
-  handleRemoteBusy,
-  handleRemoteHangup,
+  handleRemoteCompletion,
   handleRemoteIce,
-  handleRemoteReject,
+  handleRemoteStateUpdate,
   registerIncomingOffer,
 } from "../lib/callEngine";
 import { CALL_WS_ACTIONS } from "../lib/constants";
 import {
-  CallAnswerPayload,
-  CallEndPayload,
-  CallIcePayload,
-  CallOfferPayload,
+  CallAnswerResponse,
+  CallCompletionResponse,
+  CallIceCandidateResponse,
+  CallOfferResponse,
+  CallStateUpdateResponse,
 } from "../model/types";
 
-const onOffer: WSHandler<CallOfferPayload> = (data) => {
+const onOffer: WSHandler<CallOfferResponse> = (data) => {
   if (!data.object) return;
   const ownerUid = useUserStore.getState().userId;
   if (!ownerUid) return;
+  if (data.object.from_user === ownerUid) return;
   registerIncomingOffer(data.object, ownerUid);
 };
 
-const onAnswer: WSHandler<CallAnswerPayload> = (data) => {
+const onAnswer: WSHandler<CallAnswerResponse> = (data) => {
   if (!data.object) return;
+  const ownerUid = useUserStore.getState().userId;
+  if (ownerUid && data.object.from_user === ownerUid) return;
   void handleRemoteAnswer(data.object);
 };
 
-const onIce: WSHandler<CallIcePayload> = (data) => {
+const onIce: WSHandler<CallIceCandidateResponse> = (data) => {
   if (!data.object) return;
+  const ownerUid = useUserStore.getState().userId;
+  if (ownerUid && data.object.uid_user_owner_candidate === ownerUid) return;
   void handleRemoteIce(data.object);
 };
 
-const onHangup: WSHandler<CallEndPayload> = (data) => {
+const onCompletion: WSHandler<CallCompletionResponse> = (data) => {
   if (!data.object) return;
-  handleRemoteHangup(data.object);
+  handleRemoteCompletion(data.object);
 };
 
-const onReject: WSHandler<CallEndPayload> = (data) => {
+const onStateUpdate: WSHandler<CallStateUpdateResponse> = (data) => {
   if (!data.object) return;
-  handleRemoteReject(data.object);
-};
-
-const onBusy: WSHandler<CallEndPayload> = (data) => {
-  if (!data.object) return;
-  handleRemoteBusy(data.object);
+  handleRemoteStateUpdate(data.object);
 };
 
 export const bootstrapCallWSHandlers = () => {
   registerWSHandler(CALL_WS_ACTIONS.OFFER, onOffer as WSHandler);
   registerWSHandler(CALL_WS_ACTIONS.ANSWER, onAnswer as WSHandler);
   registerWSHandler(CALL_WS_ACTIONS.ICE, onIce as WSHandler);
-  registerWSHandler(CALL_WS_ACTIONS.HANGUP, onHangup as WSHandler);
-  registerWSHandler(CALL_WS_ACTIONS.REJECT, onReject as WSHandler);
-  registerWSHandler(CALL_WS_ACTIONS.BUSY, onBusy as WSHandler);
+  registerWSHandler(CALL_WS_ACTIONS.COMPLETION, onCompletion as WSHandler);
+  registerWSHandler(CALL_WS_ACTIONS.STATE_UPDATE, onStateUpdate as WSHandler);
 };
