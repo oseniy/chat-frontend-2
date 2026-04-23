@@ -398,6 +398,14 @@ export const registerIncomingOffer = (payload: CallOfferResponse, ownerUid: stri
     ownerUid,
   };
 
+  // Инициализируем идентификаторы маршрутизации сразу, иначе handleRemoteIce
+  // будет отбрасывать ICE-кандидаты инициатора по проверке message_rtc_uid,
+  // и к моменту accept у нас не будет ни одного remote-кандидата → ICE
+  // не найдёт пары и соединение провалится.
+  currentMessageRtcUid = messageRtcUid;
+  currentOwnerUid = ownerUid;
+  currentPeerUid = payload.from_user;
+
   store.setSession({
     messageRtcUid,
     kind: "peer",
