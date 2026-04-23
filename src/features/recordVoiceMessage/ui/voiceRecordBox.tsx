@@ -1,3 +1,5 @@
+"use client";
+
 import MessageSendBtn from "@icons/chat/messageSendBtn.svg";
 import Trash from "@icons/sendFiles/trash.svg";
 import { useEffect } from "react";
@@ -18,7 +20,8 @@ export const mapVoiceToPendingFile = (file: File): PendingFile => {
 };
 
 export const VoiceRecordBox = () => {
-  const { exitVoiceRecord } = useChatStore();
+  // Добавили fetchMedia и chatKey из стора
+  const { exitVoiceRecord, fetchMedia, chatKey } = useChatStore();
   const sendMessage = useSendMessage();
   const recorder = useVoiceRecorder();
 
@@ -44,7 +47,16 @@ export const VoiceRecordBox = () => {
 
     const pendingFile = mapVoiceToPendingFile(file);
 
+    // Отправляем сообщение
     await sendMessage("", [], [pendingFile]);
+
+    // СРАЗУ обновляем вкладку голосовых, чтобы файл появился в списке
+    if (chatKey) {
+      // Небольшая задержка, чтобы бэкенд успел сохранить файл в БД
+      setTimeout(() => {
+        fetchMedia(chatKey);
+      }, 500);
+    }
 
     exitVoiceRecord();
   };
@@ -64,7 +76,7 @@ export const VoiceRecordBox = () => {
           variant="text"
           className="hover:bg-primary-hover h-11 w-11 rounded-md transition-colors duration-300"
           onClick={() => {
-            recorder.cancel;
+            recorder.cancel(); // Исправил вызов функции
             exitVoiceRecord();
           }}
         >

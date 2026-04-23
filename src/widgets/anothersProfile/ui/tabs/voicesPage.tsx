@@ -39,7 +39,6 @@ export const VoicesPage: React.FC<VoicesPageProps> = ({ className, chatKey: chat
     return media
       .filter((file: MappedMessageFile) => {
         const type = file.fileType || "";
-        // Фильтруем аудио и webm (голосовые из браузера)
         return type.startsWith("audio/") || type === "video/webm";
       })
       .map((file: MappedMessageFile) => {
@@ -68,31 +67,35 @@ export const VoicesPage: React.FC<VoicesPageProps> = ({ className, chatKey: chat
 
   const isEmpty = voiceMessages.length === 0;
 
+  if (isLoadingMedia && isEmpty) {
+    return <div className="text-muted-foreground p-10 text-center text-sm">Загрузка...</div>;
+  }
+
   return (
-    <div className={cn("flex h-full w-full flex-col", className)}>
-      {isLoadingMedia && isEmpty ? (
-        <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
-          Загрузка голосовых...
-        </div>
-      ) : isEmpty ? (
-        <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
+    <div className={cn("flex flex-1 flex-col overflow-y-auto", className)}>
+      {isEmpty ? (
+        <div className="text-muted-foreground p-10 text-center text-sm">
           Голосовых сообщений нет
         </div>
       ) : (
-        <div className="custom-scrollbar flex-1 overflow-y-auto p-4">
-          <div className="flex flex-col gap-4">
-            {voiceMessages.map((item: VoiceMessageData) => (
-              <AudioMessage
-                key={item.id}
-                file={item.file}
-                isMine={false}
-                time={item.time}
-                status={"read" as AudioMessageStatus}
-                className="bg-secondary/20 rounded-xl"
-              />
-            ))}
-          </div>
-        </div>
+        voiceMessages.map((item, index) => (
+          <React.Fragment key={item.id}>
+            <div className="group flex items-center gap-3 p-4 transition-colors hover:bg-black/5">
+              <div className="min-w-0 flex-1">
+                <AudioMessage
+                  file={item.file}
+                  isMine={false}
+                  time={item.time}
+                  status={"read" as AudioMessageStatus}
+                  className="bg-transparent p-0"
+                />
+              </div>
+            </div>
+
+            {/* Точная копия линии из FilesPage */}
+            {index < voiceMessages.length - 1 && <div className="mx-4 border-b border-black/30" />}
+          </React.Fragment>
+        ))
       )}
     </div>
   );
