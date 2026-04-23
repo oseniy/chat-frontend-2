@@ -111,19 +111,30 @@ export const useChatStore = create<ChatState>((set) => ({
     try {
       const data = await getChatMedia(chatKey);
 
-      const imagesOnly = (data as unknown as Record<string, unknown>[])
-        .filter((file) => {
-          const type = (file.file_type || file.fileType) as string | undefined;
-          return type?.startsWith("image/");
-        })
-        .map((file) => ({
-          ...file,
-          fileType: (file.file_type || file.fileType) as string,
-          fileUrl: (file.file_url || file.fileUrl) as string,
-        })) as unknown as MappedMessageFile[];
+      const allFiles = data.map((file): MappedMessageFile => {
+        const f = file as MappedMessageFile & {
+          file_type?: string;
+          file_url?: string;
+          file_uid?: string;
+        };
 
-      set({ media: imagesOnly, isLoadingMedia: false, isMediaLoaded: true });
+        return {
+          ...file,
+          fileType: f.fileType || f.file_type || "",
+          fileUrl: f.fileUrl || f.file_url || "",
+          uid: f.uid || f.file_uid || "",
+        };
+      });
+
+      console.log("DEBUG: Загруженные файлы:", allFiles);
+
+      set({
+        media: allFiles,
+        isLoadingMedia: false,
+        isMediaLoaded: true,
+      });
     } catch {
+      // Убрали (error), чтобы ESLint не ругался
       set({ isLoadingMedia: false, isMediaLoaded: false });
     }
   },
