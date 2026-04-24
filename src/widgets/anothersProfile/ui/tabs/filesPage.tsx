@@ -1,5 +1,5 @@
 import { FileText } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react"; // Добавили useMemo в импорт
 
 import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { formatBytes } from "@/shared/lib/formatBytes";
@@ -26,9 +26,18 @@ export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
     };
   }, [chatKey, fetchFiles, clearFiles]);
 
+  // 1. ПЕРЕНЕСЛИ СЮДА (до условий return)
+  const filteredFiles = useMemo(() => {
+    return files.filter((file) => {
+      const type = file.fileType?.toLowerCase() || "";
+      // Убираем картинки и голосовые, чтобы во вкладке "Файлы" были только документы
+      return !type.startsWith("image/") && !type.startsWith("audio/") && type !== "video/webm";
+    });
+  }, [files]);
+
   // Функция для принудительного скачивания
   const handleDownload = async (e: React.MouseEvent, url: string, fileName: string) => {
-    e.preventDefault(); // Предотвращаем переход по ссылке
+    e.preventDefault();
 
     try {
       const response = await fetch(url);
@@ -39,16 +48,14 @@ export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
 
       const link = document.createElement("a");
       link.href = blobUrl;
-      link.download = fileName; // Имя файла, которое увидит пользователь
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
 
-      // Чистим память
       document.body.removeChild(link);
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
       console.error("Ошибка при скачивании файла:", error);
-      // Здесь можно добавить showToast с ошибкой
     }
   };
 
@@ -58,18 +65,17 @@ export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
 
   return (
     <div className={cn("flex flex-1 flex-col overflow-y-auto", className)}>
-      {files.map((file, index) => (
+      {/* 2. ИСПОЛЬЗУЕМ filteredFiles ВМЕСТО files */}
+      {filteredFiles.map((file, index) => (
         <React.Fragment key={file.uid}>
           <div
             onClick={(e) => handleDownload(e, file.fileUrl || "", file.name || "file")}
             className="group flex cursor-pointer items-center gap-3 p-4 transition-colors hover:bg-black/5"
           >
-            {/* иконка */}
             <div className="bg-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white">
               <FileText size={20} />
             </div>
 
-            {/* Инфо о файле */}
             <div className="min-w-0 flex-1">
               <p className="text-foreground truncate text-[14px] leading-tight font-semibold">
                 {file.name}
@@ -80,8 +86,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
             </div>
           </div>
 
-          {/* Разделительная линия */}
-          {index < files.length - 1 && <div className="mx-4 border-b border-black/30" />}
+          {index < filteredFiles.length - 1 && <div className="mx-4 border-b border-black/30" />}
         </React.Fragment>
       ))}
     </div>
