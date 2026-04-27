@@ -293,17 +293,33 @@ const resolveIceServers = async (): Promise<RTCIceServer[]> => {
   return CALL_DEFAULT_ICE_SERVERS;
 };
 
+// Бэк проверяет участников звонка по полю from_user_uid: оно должно совпадать
+// с инициатором (caller'ом) сессии, а не с фактическим отправителем сообщения.
+// Это та же конвенция направления, что используется у answer_call (см. комментарий
+// в callWsHandlers.ts/onAnswer). Если callee отправит ICE/state_update с
+// from_user_uid = собственный uid, бэк отбрасывает сообщение с ошибкой
+// «Участники звонка не совпадают с сохраненной сессией»: для ICE ошибка
+// глушится в try/catch и кандидаты тихо теряются, для state_update приходит
+// явная ошибка. На localhost (две вкладки в одной сети) prflx-кандидаты
+// замыкают пару без участия сигналинга, поэтому баг там не виден.
+const buildDirectionRouting = (): { from_user_uid: string; to_user_uid: string } | null => {
+  if (!currentOwnerUid || !currentPeerUid) return null;
+  const isCaller = useCallStore.getState().session?.isCaller ?? false;
+  return isCaller
+    ? { from_user_uid: currentOwnerUid, to_user_uid: currentPeerUid }
+    : { from_user_uid: currentPeerUid, to_user_uid: currentOwnerUid };
+};
+
 const flushPendingLocalIce = () => {
-  if (!currentMessageRtcUid || !currentOwnerUid || !currentPeerUid) return;
+  if (!currentMessageRtcUid) return;
+  const routing = buildDirectionRouting();
+  if (!routing) return;
   const messageRtcUid = currentMessageRtcUid;
-  const ownerUid = currentOwnerUid;
-  const peerUid = currentPeerUid;
   while (pendingLocalIce.length > 0) {
     const ice_candidate = pendingLocalIce.shift();
     if (!ice_candidate) continue;
     void sendIceCandidate({
-      from_user_uid: ownerUid,
-      to_user_uid: peerUid,
+      ...routing,
       message_rtc_uid: messageRtcUid,
       ice_candidate,
     });
@@ -360,9 +376,13 @@ const createPeerConnection = (iceServers: RTCIceServer[]) => {
       pendingLocalIce.push(ice_candidate);
       return;
     }
+    const routing = buildDirectionRouting();
+    if (!routing) {
+      pendingLocalIce.push(ice_candidate);
+      return;
+    }
     void sendIceCandidate({
-      from_user_uid: currentOwnerUid,
-      to_user_uid: currentPeerUid,
+      ...routing,
       message_rtc_uid: currentMessageRtcUid,
       ice_candidate,
     });
@@ -444,11 +464,12 @@ const createPeerConnection = (iceServers: RTCIceServer[]) => {
 
 const reportConnected = () => {
   if (connectedStateReported) return;
-  if (!currentMessageRtcUid || !currentOwnerUid || !currentPeerUid) return;
+  if (!currentMessageRtcUid) return;
+  const routing = buildDirectionRouting();
+  if (!routing) return;
   connectedStateReported = true;
   void sendCallStateUpdate({
-    from_user_uid: currentOwnerUid,
-    to_user_uid: currentPeerUid,
+    ...routing,
     message_rtc_uid: currentMessageRtcUid,
     state: "connected",
   });
@@ -458,14 +479,16 @@ const reportFailed = (reasonCode: CallReasonCode, userReason: string) => {
   const store = useCallStore.getState();
   const session = store.session;
   if (!session || session.status === "ended") return;
-  if (currentMessageRtcUid && currentOwnerUid && currentPeerUid) {
-    void sendCallStateUpdate({
-      from_user_uid: currentOwnerUid,
-      to_user_uid: currentPeerUid,
-      message_rtc_uid: currentMessageRtcUid,
-      state: "failed",
-      reason_code: reasonCode,
-    });
+  if (currentMessageRtcUid) {
+    const routing = buildDirectionRouting();
+    if (routing) {
+      void sendCallStateUpdate({
+        ...routing,
+        message_rtc_uid: currentMessageRtcUid,
+        state: "failed",
+        reason_code: reasonCode,
+      });
+    }
   }
   store.patchSession({ status: "error", endedReason: userReason });
   finishCall(reasonCode);
