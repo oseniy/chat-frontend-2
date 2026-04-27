@@ -7,7 +7,10 @@ export const CALL_WS_ACTIONS = {
   NEW_CALL_MESSAGE: "new_call_message",
 } as const;
 
-export const CALL_DEFAULT_ICE_SERVERS: RTCIceServer[] = [{ urls: "stun:turn-server.ktsf.ru:3478" }];
+export const CALL_DEFAULT_ICE_SERVERS: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
 
 export const CALL_AUDIO_CONSTRAINTS: MediaTrackConstraints = {
   echoCancellation: true,
