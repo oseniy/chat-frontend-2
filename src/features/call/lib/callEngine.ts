@@ -541,10 +541,11 @@ export const startOutgoingCall = async (opts: {
   currentPeerUid = opts.peer.uid;
 
   const iceServers = await resolveIceServers();
-  pc = createPeerConnection(iceServers);
+  pc = createPeerConnection(iceServers) ?? null;
   localStream.getTracks().forEach((track) => pc!.addTrack(track, localStream!));
 
   let offer: RTCSessionDescriptionInit;
+  if (!pc) return;
   try {
     offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
