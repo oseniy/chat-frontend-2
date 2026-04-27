@@ -676,9 +676,9 @@ export const acceptIncomingCall = async () => {
   currentPeerUid = incoming.peerUid;
 
   const iceServers = await resolveIceServers();
-  pc = createPeerConnection(iceServers);
+  pc = createPeerConnection(iceServers) ?? null;
   localStream.getTracks().forEach((track) => pc!.addTrack(track, localStream!));
-
+  if (!pc) return;
   try {
     await pc.setRemoteDescription({ type: "offer", sdp: incoming.offerSdp });
     isRemoteDescriptionSet = true;
