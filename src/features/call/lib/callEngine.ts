@@ -293,17 +293,29 @@ const resolveIceServers = async (): Promise<RTCIceServer[]> => {
   return CALL_DEFAULT_ICE_SERVERS;
 };
 
+// Бэк ждёт у ICE-сообщений ту же конвенцию направления, что и у answer_call:
+// from_user_uid = инициатор звонка, to_user_uid = принимающий — независимо от того,
+// кто из двух сторон отправляет это конкретное сообщение. Если callee шлёт ICE
+// в формате "отправитель→получатель" (from=я, to=другой), бэк не маршрутизирует
+// его инициатору, и у того никогда не появятся remote-кандидаты.
+const buildIceRouting = (): { from_user_uid: string; to_user_uid: string } | null => {
+  if (!currentOwnerUid || !currentPeerUid) return null;
+  const isCaller = useCallStore.getState().session?.isCaller ?? false;
+  return isCaller
+    ? { from_user_uid: currentOwnerUid, to_user_uid: currentPeerUid }
+    : { from_user_uid: currentPeerUid, to_user_uid: currentOwnerUid };
+};
+
 const flushPendingLocalIce = () => {
-  if (!currentMessageRtcUid || !currentOwnerUid || !currentPeerUid) return;
+  if (!currentMessageRtcUid) return;
+  const routing = buildIceRouting();
+  if (!routing) return;
   const messageRtcUid = currentMessageRtcUid;
-  const ownerUid = currentOwnerUid;
-  const peerUid = currentPeerUid;
   while (pendingLocalIce.length > 0) {
     const ice_candidate = pendingLocalIce.shift();
     if (!ice_candidate) continue;
     void sendIceCandidate({
-      from_user_uid: ownerUid,
-      to_user_uid: peerUid,
+      ...routing,
       message_rtc_uid: messageRtcUid,
       ice_candidate,
     });
@@ -324,6 +336,9 @@ const flushPendingRemoteIce = async () => {
 };
 
 const createPeerConnection = (iceServers: RTCIceServer[]) => {
+  if (!currentMessageRtcUid) return;
+  const routing = buildIceRouting();
+  if (!routing) return;
   const connection = new RTCPeerConnection({
     iceServers,
     // max-bundle и одна транспортная сессия → меньше пар для проверки,
@@ -361,8 +376,7 @@ const createPeerConnection = (iceServers: RTCIceServer[]) => {
       return;
     }
     void sendIceCandidate({
-      from_user_uid: currentOwnerUid,
-      to_user_uid: currentPeerUid,
+      ...routing,
       message_rtc_uid: currentMessageRtcUid,
       ice_candidate,
     });
