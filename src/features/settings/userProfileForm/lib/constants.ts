@@ -1,16 +1,16 @@
 export const MONTHS = [
-  { value: 1, label: "Январь" },
-  { value: 2, label: "Февраль" },
-  { value: 3, label: "Март" },
-  { value: 4, label: "Апрель" },
-  { value: 5, label: "Май" },
-  { value: 6, label: "Июнь" },
-  { value: 7, label: "Июль" },
-  { value: 8, label: "Август" },
-  { value: 9, label: "Сентябрь" },
-  { value: 10, label: "Октябрь" },
-  { value: 11, label: "Ноябрь" },
-  { value: 12, label: "Декабрь" },
+  { value: 1, label: "Января" },
+  { value: 2, label: "Февраля" },
+  { value: 3, label: "Марта" },
+  { value: 4, label: "Апреля" },
+  { value: 5, label: "Мая" },
+  { value: 6, label: "Июня" },
+  { value: 7, label: "Июля" },
+  { value: 8, label: "Августа" },
+  { value: 9, label: "Сентября" },
+  { value: 10, label: "Октября" },
+  { value: 11, label: "Ноября" },
+  { value: 12, label: "Декабря" },
 ] as const;
 
 export const DAYS = Array.from({ length: 31 }, (_, i) => ({

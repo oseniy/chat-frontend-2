@@ -73,6 +73,7 @@ export const useSendMessage = () => {
                 first_name: replyTarget.fromUser.firstName,
                 last_name: replyTarget.fromUser.lastName,
                 content: replyTarget.content,
+
                 files_list: replyTarget.filesList.map((f) => ({
                   id: f.id,
                   uid: f.uid,
@@ -97,11 +98,12 @@ export const useSendMessage = () => {
                   uid: forwardMsgUid,
                   from_user: forwardTarget.fromUser.uid,
                   first_name: forwardTarget.fromUser.firstName,
-                  avatar_webp_url: forwardTarget.fromUser.avatarWebpUrl || "",
                   last_name: forwardTarget.fromUser.lastName,
                   avatar:
                     forwardTarget.fromUser.avatarUrl || forwardTarget.fromUser.avatarWebpUrl || "",
+                  avatar_webp_url: forwardTarget.fromUser.avatarWebpUrl || "",
                   content: forwardTarget.content,
+
                   files_list: forwardTarget.filesList.map((f) => ({
                     id: f.id,
                     uid: f.uid,
@@ -131,6 +133,7 @@ export const useSendMessage = () => {
             created_at: now,
             updated_at: now,
           })),
+
           ...files.map((file) => ({
             id: Number(file.id),
             uid: `${file.id}-${uuidv4()}`,
@@ -154,10 +157,11 @@ export const useSendMessage = () => {
         chat_type: chatType as ChatType,
 
         message_rtc: null,
-
         status: MESSAGE_STATUS.PENDING,
         request_uid: requestUid,
       };
+
+      console.log("tempServerMessage", tempServerMessage);
 
       const tempMessage = mapChatMessage(tempServerMessage);
 
@@ -170,11 +174,17 @@ export const useSendMessage = () => {
         allFiles.map(async (file) => {
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
+
             reader.onload = () => resolve((reader.result as string).split(",")[1]);
+
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
-          return { filename: file.name, data: base64 };
+
+          return {
+            filename: file.name,
+            data: base64,
+          };
         }),
       );
 
@@ -185,10 +195,12 @@ export const useSendMessage = () => {
           id: tempMessage.id,
           uid: tempMessage.uid,
           content: tempMessage.content,
+
           files_summary: {
             types: images.map((f) => f.type).concat(files.map((f) => f.type)),
             count: tempMessage.filesList.length,
           },
+
           hasForwarded: !!forwardMsgUid,
           created_at: now,
           from_user_id: currentUserId,
@@ -212,11 +224,13 @@ export const useSendMessage = () => {
         mapped.requestUid = requestUid;
 
         const chatState = useChatStore.getState();
+
         const tempIndex = chatState.messages.findIndex((m) => m.requestUid === requestUid);
 
         if (tempIndex !== -1) {
           const updated = [...chatState.messages];
           updated[tempIndex] = mapped;
+
           useChatStore.setState({ messages: updated });
         } else {
           addMessage(mapped);
@@ -229,11 +243,14 @@ export const useSendMessage = () => {
             id: mapped.id,
             uid: mapped.uid,
             content: mapped.content,
+
             files_summary: {
               types: mapped.filesList.map((f) => f.fileType).filter((t): t is string => t !== null),
               count: mapped.filesList.length,
             },
+
             hasForwarded: serverMessage.forwarded_messages.length > 0,
+
             created_at: mapped.createdAt,
             from_user_id: mapped.fromUser.uid,
           },
@@ -270,7 +287,6 @@ export const useSendMessage = () => {
         }
 
         await Promise.all(tasks);
-
         setForwardTargets([]);
         return;
       }
