@@ -81,7 +81,7 @@ export const Chat = ({
     }
 
     const firstPageMessages = data.pages[0]?.data?.results ?? [];
-
+    console.log("firstPageMessages", firstPageMessages);
     const normalized = firstPageMessages.length > 0 ? mapChatMessages(firstPageMessages) : [];
 
     const chatKeyUser = normalized[0]?.chatKey || "";

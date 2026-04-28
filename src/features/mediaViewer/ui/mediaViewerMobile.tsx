@@ -191,9 +191,11 @@ export const MediaViewerMobile = () => {
           variant="text"
           size="icon"
           className="h-11 w-11 text-white"
-          onClick={() => {
-            downloadFile(media.fileUrl, media.fileUrl.split("/").pop());
-            setIsToastOpen(true);
+          onClick={async () => {
+            const isDownloaded = await downloadFile(media.fileUrl, media.fileUrl.split("/").pop());
+            if (isDownloaded) {
+              setIsToastOpen(true);
+            }
           }}
         >
           <Download className="h-6 w-6" />

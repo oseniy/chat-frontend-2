@@ -16,6 +16,7 @@ export interface MessageFile {
   uid: string;
   file: string | File;
   file_url: string;
+  download_name?: string;
   file_webp?: string | null;
   name?: string;
   file_webp_url?: string;

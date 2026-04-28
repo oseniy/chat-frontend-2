@@ -65,7 +65,10 @@ export const useChatProfileContextMenu = ({
           });
         },
       },
-      {
+    ];
+
+    if ((chatType === "channel" && !isOwner) || chatType === "group")
+      items.push({
         label: leaveLabel,
         icon: exit,
         onClick: () => {
@@ -75,8 +78,7 @@ export const useChatProfileContextMenu = ({
             onConfirm: confirmLeave,
           });
         },
-      },
-    ];
+      });
 
     if (isOwner) {
       items.push({
@@ -95,6 +97,7 @@ export const useChatProfileContextMenu = ({
 
     return items;
   }, [
+    chatType,
     clearLabel,
     leaveLabel,
     deleteLabel,

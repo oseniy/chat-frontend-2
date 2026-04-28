@@ -1,4 +1,5 @@
 import { useChatStore } from "@/entities/chat/model/useChatStore";
+import { downloadFile } from "@/shared/lib/downloadFile";
 import { truncateFileName } from "@/shared/lib/truncateFilename";
 import { cn } from "@/shared/shadcn/lib/utils";
 import Audio from "@/shared/ui/icons/files/audioPreview.svg";
@@ -31,9 +32,13 @@ export const FileMessage: React.FC<FileMessageProps> = ({
   const isSelectionMode = useChatStore((s) => s.selectedMessageUids.size > 0);
 
   const handleFileClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+
     if (isSelectionMode) {
-      e.preventDefault();
+      return;
     }
+
+    downloadFile(file.src, file.title || file.src.split("/").pop());
   };
 
   const formatFileSize = (bytes: number | null) => {
@@ -44,11 +49,13 @@ export const FileMessage: React.FC<FileMessageProps> = ({
   };
 
   return (
-    <a
-      download={file.src}
-      href={file.src}
+    <button
+      type="button"
       onClick={handleFileClick}
-      className={cn("group flex items-center gap-3 px-3 py-2.5", className)}
+      className={cn(
+        "group flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left",
+        className,
+      )}
     >
       <div className="flex h-12 w-12 items-center justify-center rounded-full">
         {status === "pending" && <SpinnerWithX />}
@@ -63,7 +70,7 @@ export const FileMessage: React.FC<FileMessageProps> = ({
       </div>
       <div className="grid min-w-0 flex-1 grid-cols-1 gap-1">
         <span className="subtext group-hover:text-primary truncate text-black transition-colors duration-300">
-          {truncateFileName(file.title || file.src.split("/").pop() || "")}
+          {truncateFileName(file.donwload_name || file.title || file.src.split("/").pop() || "")}
         </span>
 
         <div className="flex items-center justify-between gap-3">
@@ -73,6 +80,6 @@ export const FileMessage: React.FC<FileMessageProps> = ({
           <MessageTimeAndStatus isMine={isMine} time={time} status={status} isEmpty={false} />
         </div>
       </div>
-    </a>
+    </button>
   );
 };

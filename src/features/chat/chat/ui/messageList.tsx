@@ -44,7 +44,6 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // ✅ ВАЖНО: контроль prepend
   const isPrependingRef = useRef(false);
   const prevScrollHeightRef = useRef(0);
 

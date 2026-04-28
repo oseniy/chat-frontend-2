@@ -135,9 +135,11 @@ export const MediaViewer = () => {
           variant="text"
           size="icon"
           className="text-gray h-8 w-8 hover:text-white"
-          onClick={() => {
-            downloadFile(media.fileUrl, media.fileUrl.split("/").pop());
-            setIsToastOpen(true);
+          onClick={async () => {
+            const isDownloaded = await downloadFile(media.fileUrl, media.fileUrl.split("/").pop());
+            if (isDownloaded) {
+              setIsToastOpen(true);
+            }
           }}
         >
           <Download className="h-8 w-8" />

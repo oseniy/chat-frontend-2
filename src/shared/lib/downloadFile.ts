@@ -1,8 +1,11 @@
-export const downloadFile = async (fileUrl: string, fileName?: string) => {
+export const downloadFile = async (fileUrl: string, fileName?: string): Promise<boolean> => {
   try {
-    const response = await fetch(fileUrl, {
+    const proxyUrl = `/api/download?url=${encodeURIComponent(fileUrl)}${
+      fileName ? `&name=${encodeURIComponent(fileName)}` : ""
+    }`;
+
+    const response = await fetch(proxyUrl, {
       method: "GET",
-      mode: "cors",
       cache: "no-cache",
     });
 
@@ -34,21 +37,9 @@ export const downloadFile = async (fileUrl: string, fileName?: string) => {
     document.body.removeChild(link);
 
     window.URL.revokeObjectURL(blobUrl);
+    return true;
   } catch (error) {
     console.error("Error downloading file:", error);
-
-    try {
-      const link = document.createElement("a");
-      link.href = fileUrl;
-      link.download = fileName || fileUrl.split("/").pop() || "download";
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (fallbackError) {
-      console.error("Fallback download also failed:", fallbackError);
-
-      window.open(fileUrl, "_blank");
-    }
+    return false;
   }
 };

@@ -45,7 +45,7 @@ export const mapMessageFile = (file: MessageFile): MappedMessageFile => ({
   fileType: file.file_type ?? null,
   isNew: file.new,
   createdAt: file.created_at,
-  name: file.name ?? "",
+  name: file.name || file.download_name || "",
   updatedAt: file.updated_at,
 });
 
