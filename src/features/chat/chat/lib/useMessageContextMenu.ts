@@ -2,6 +2,7 @@ import Copy from "@icons/chat/context-menu/copy.svg";
 import Delete from "@icons/chat/context-menu/delete.svg";
 import Select from "@icons/chat/context-menu/select.svg";
 import Forwarded from "@icons/chat/forwardedd.svg";
+import Replay from "@icons/chat/replay.svg";
 import { MouseEvent } from "react";
 
 import { useChatStore } from "@/entities/chat/model/useChatStore";
@@ -34,7 +35,7 @@ export const useMessageContextMenu = (message: MappedChatMessage) => {
       openMenu(
         menuId,
         [
-          { label: "Ответить", icon: Forwarded, onClick: () => setReplyTarget(message) },
+          { label: "Ответить", icon: Replay, onClick: () => setReplyTarget(message) },
           {
             label: "Переслать",
             icon: Forwarded,
