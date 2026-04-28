@@ -17,16 +17,21 @@ export const handleCreateTextMessage: WSHandler = (data) => {
 
   const currentUserId = useUserStore.getState().userId;
   const chatKey = chatStore.chatKey;
+  const chatId = chatStore.chatId;
 
   if (!currentUserId) return;
 
   const newMessage = mapChatMessage(data.object as ChatMessageUI);
   const isMine = newMessage.fromUser.uid === currentUserId;
 
-  const isCurrentChat =
+  const isCurrentChatById = chatId !== null && newMessage.chatId === chatId;
+
+  const isCurrentChatByKey =
     (newMessage.chatType === "chat" &&
       (isMine ? newMessage.toUser?.uid === chatKey : newMessage.fromUser.uid === chatKey)) ||
     (newMessage.chatType !== "chat" && newMessage.chatKey === chatKey);
+
+  const isCurrentChat = isCurrentChatById || isCurrentChatByKey;
 
   if (isCurrentChat) {
     const tempIndex = chatStore.messages.findIndex((msg) => msg.requestUid === data.request_uid);

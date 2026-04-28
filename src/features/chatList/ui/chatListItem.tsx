@@ -31,6 +31,8 @@ export const ChatListItemComponent = ({
   const user = chat.member;
   const { onContextMenu, isOpen, showAddedModal, handleModalClose, addedContactName } =
     useChatListItemContextMenu(chat, actions);
+
+  const isGroupOrChannelChat = chat.key.startsWith("group") || chat.key.startsWith("channel");
   return (
     <>
       <Link
@@ -51,6 +53,7 @@ export const ChatListItemComponent = ({
           <Avatar
             isOnline={user?.is_online ?? false}
             avatarUrl={user?.avatar_webp_url || user?.avatar_url || ""}
+            variant={isGroupOrChannelChat ? "chat" : "user"}
           />
           <div
             className={cn(

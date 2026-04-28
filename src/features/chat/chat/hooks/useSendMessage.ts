@@ -33,6 +33,7 @@ export const useSendMessage = () => {
       forwardMsgUid?: string,
     ) => {
       if (!currentUserId || !chatKey) return;
+      const sourceChatKey = chatKey;
 
       const forwardTarget = forwardMsgUid
         ? forwardTargets.find((msg) => msg.uid === forwardMsgUid)
@@ -232,7 +233,7 @@ export const useSendMessage = () => {
           updated[tempIndex] = mapped;
 
           useChatStore.setState({ messages: updated });
-        } else {
+        } else if (chatState.chatKey === sourceChatKey) {
           addMessage(mapped);
         }
 
