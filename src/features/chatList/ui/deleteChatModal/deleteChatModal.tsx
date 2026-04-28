@@ -2,6 +2,8 @@ import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
+import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
+import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { deleteChat } from "@/features/chatList/api/deleteChat";
 import { useChatListStore } from "@/features/chatList/model/useChatListStore";
 import { ModalDialog } from "@/shared/modalDialog/ui/modalDialog";
@@ -28,6 +30,11 @@ export const DeleteChatModal: React.FC<DeleteChatModalProps> = ({
   onClose,
 }) => {
   const queryClient = useQueryClient();
+  const activeChatKey = useChatStore((s) => s.chatKey);
+  const activeChatKeyUser = useChatStore((s) => s.chatKeyUser);
+  const activeChatId = useChatStore((s) => s.chatId);
+  const resetActiveChat = useChatStore((s) => s.reset);
+  const removeChatInfo = useChatInfoStore((s) => s.removeChatInfo);
   const { chatsByKey, removeChat, upsertChat } = useChatListStore.getState();
   const router = useRouter();
   const name =
@@ -40,13 +47,26 @@ export const DeleteChatModal: React.FC<DeleteChatModalProps> = ({
     if (!prev) return;
 
     try {
-      await deleteChat({ index: prev.id });
+      const result = await deleteChat({ index: prev.id });
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      const isDeletingActiveChat =
+        activeChatKey === chatKey ||
+        activeChatKey === prev.member.uid ||
+        activeChatKeyUser === chatKey ||
+        activeChatId === prev.id;
+
       removeChat(chatKey);
+      removeChatInfo(chatKey);
       queryClient.invalidateQueries({ queryKey: ["chats"] });
       onClose();
 
-      router.push("/chats");
-      router.refresh();
+      if (isDeletingActiveChat) {
+        resetActiveChat();
+        router.replace("/chats/deleted");
+      }
     } catch {
       // rollback
       upsertChat(prev);

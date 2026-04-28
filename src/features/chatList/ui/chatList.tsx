@@ -17,9 +17,8 @@ interface ChatListProps {
 }
 
 export const ChatList: React.FC<ChatListProps> = ({ chats, isSearch }) => {
-  const { chatKey, clearForwardTargets, clearReplyTarget, exitSelectionMode } = useChatStore(
-    (s) => s,
-  );
+  const { chatKey, chatKeyUser, clearForwardTargets, clearReplyTarget, exitSelectionMode } =
+    useChatStore((s) => s);
 
   const actions = useChatListActions();
 
@@ -42,7 +41,11 @@ export const ChatList: React.FC<ChatListProps> = ({ chats, isSearch }) => {
               exitSelectionMode();
             }}
             chat={chat}
-            isActive={chat.key === chatKey || chat.member.uid === chatKey}
+            isActive={
+              chat.key === chatKey ||
+              chat.member.uid === chatKey ||
+              (!!chatKeyUser && chat.key === chatKeyUser)
+            }
             isLast={chat.id === chats[chats.length - 1].id}
           />
         ))

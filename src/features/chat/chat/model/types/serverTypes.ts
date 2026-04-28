@@ -68,7 +68,7 @@ export interface ChatMessage {
   new: boolean;
   created_at: number;
   updated_at: number;
-  chat_id: string;
+  chat_id: number;
   chat_key: string;
   chat_type: string;
   message_rtc?: CallInfo | null;

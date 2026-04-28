@@ -53,7 +53,7 @@ export const handleCreateTextMessage: WSHandler = (data) => {
     chatListStore.addNewChat(newMessage.chatKey);
   } else if (!existingChat && newMessage.chatType === "chat") {
     const newChat: ChatListItem = {
-      id: +newMessage.chatKey.slice(5),
+      id: newMessage.chatId || 0,
       key: newMessage.chatKey,
       title: "",
       type: newMessage.chatType,

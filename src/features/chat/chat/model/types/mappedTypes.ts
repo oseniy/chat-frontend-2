@@ -14,7 +14,7 @@ export interface MappedChatMessage {
   createdAt: number;
   blocks: MessageBlock[];
   updatedAt: number;
-  chatId: string | null;
+  chatId: number | null;
   chatKey: string;
   chatType: ChatType;
   isForwarded?: boolean;
