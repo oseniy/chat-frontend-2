@@ -2,22 +2,27 @@ import { create } from "zustand";
 
 import { CallSession, CallStatus } from "./types";
 
+export type CallLayoutMode = "window" | "fullscreen" | "minimized";
+
 type CallStoreState = {
   session: CallSession | null;
   isMuted: boolean;
+  layoutMode: CallLayoutMode;
 
   setSession: (session: CallSession | null) => void;
   patchSession: (patch: Partial<CallSession>) => void;
   setStatus: (status: CallStatus) => void;
   setMuted: (muted: boolean) => void;
+  setLayoutMode: (mode: CallLayoutMode) => void;
   reset: () => void;
 };
 
 export const useCallStore = create<CallStoreState>((set, get) => ({
   session: null,
   isMuted: false,
+  layoutMode: "window",
 
-  setSession: (session) => set({ session, isMuted: false }),
+  setSession: (session) => set({ session, isMuted: false, layoutMode: "window" }),
 
   patchSession: (patch) => {
     const current = get().session;
@@ -35,5 +40,7 @@ export const useCallStore = create<CallStoreState>((set, get) => ({
 
   setMuted: (muted) => set({ isMuted: muted }),
 
-  reset: () => set({ session: null, isMuted: false }),
+  setLayoutMode: (layoutMode) => set({ layoutMode }),
+
+  reset: () => set({ session: null, isMuted: false, layoutMode: "window" }),
 }));

@@ -17,16 +17,16 @@ export default function ChatLayout({ children, sidebar, extra }: ChatLayoutProps
   return (
     <QueryCustomProvider>
       <GlobalModal />
-      <CallManager />
       <MediaViewerContainer />
       <ContextMenuProvider>
         <ToastProvider>
           <div className="desktop:py-1 desktop:px-3 mx-auto flex h-dvh max-h-dvh min-h-dvh max-w-300 flex-col gap-4 overflow-hidden">
-            <div className="desktop:flex-row desktop:gap-4 mx-auto flex h-full min-h-0 w-full flex-col-reverse">
+            <div className="desktop:flex-row desktop:gap-4 relative mx-auto flex h-full min-h-0 w-full flex-col-reverse">
               <NavBar />
               <ResponsiveLayout sidebar={sidebar} extra={extra}>
                 {children}
               </ResponsiveLayout>
+              <CallManager />
             </div>
           </div>
         </ToastProvider>
