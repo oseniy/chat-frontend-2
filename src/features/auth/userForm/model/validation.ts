@@ -2,7 +2,9 @@ import { z } from "zod";
 
 const firstNameSchema = z
   .string()
-  .transform((val) => val.trim())
+  .refine((val) => !/^\s/.test(val), {
+    message: "Имя не может начинаться с пробела",
+  })
   .pipe(
     z
       .string()
@@ -25,6 +27,9 @@ const firstNameSchema = z
 
 const nicknameSchema = z
   .string()
+  .refine((val) => !/^\s/.test(val), {
+    message: "Никнейм не может начинаться с пробела",
+  })
   .min(1, "Заполните поле")
   .min(5, "Не менее 5 символов")
   .max(32, "Не более 32 символов")

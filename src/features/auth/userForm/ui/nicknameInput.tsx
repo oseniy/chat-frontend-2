@@ -34,8 +34,7 @@ export const NicknameInput: React.FC<NicknameInputProps> = ({
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const trimmedNickname = nickname?.trim();
-    if (!nicknameSchema.safeParse(trimmedNickname).success) {
+    if (!nicknameSchema.safeParse(nickname).success) {
       return;
     }
 
@@ -44,7 +43,7 @@ export const NicknameInput: React.FC<NicknameInputProps> = ({
     }
 
     debounceRef.current = setTimeout(async () => {
-      const result = await checkNicknameUnique(trimmedNickname);
+      const result = await checkNicknameUnique(nickname);
 
       if (!result.success) {
         setError(name, {
