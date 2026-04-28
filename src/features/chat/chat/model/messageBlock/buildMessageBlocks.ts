@@ -2,10 +2,19 @@ import { parseInviteUrl } from "@/entities/chat/lib/parseInviteUrl";
 import { MappedChatMessage } from "@/features/chat/chat/model/types/mappedTypes";
 import { AUDIO_TYPES, FILE_TYPES, IMAGE_TYPES } from "@/features/chatList/model/constants";
 
-import { MessageBlock } from "./types";
+import { CallStatus, MessageBlock } from "./types";
 
 export const buildMessageBlocks = (msg: MappedChatMessage): MessageBlock[] => {
   const blocks: MessageBlock[] = [];
+
+  if (msg.messageRtc) {
+    blocks.push({
+      type: "call",
+      status: msg.messageRtc.status as CallStatus,
+      duration: msg.messageRtc.duration ?? null,
+    });
+    return blocks;
+  }
 
   if (msg.repliedMessages?.length > 0) {
     const r = msg.repliedMessages[0];
