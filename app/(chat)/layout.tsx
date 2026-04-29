@@ -1,5 +1,5 @@
 import { GlobalModal } from "@/entities/modals/ui/globalModal";
-import { CallManager } from "@/features/call";
+import { CallBar, CallManager } from "@/features/call";
 import { MediaViewerContainer } from "@/features/mediaViewer/ui/mediaViewerContainer";
 import { ResponsiveLayout } from "@/shared/layouts/responsiveLayout";
 import { NavBar } from "@/shared/navBar/ui/navBar";
@@ -20,8 +20,9 @@ export default function ChatLayout({ children, sidebar, extra }: ChatLayoutProps
       <MediaViewerContainer />
       <ContextMenuProvider>
         <ToastProvider>
-          <div className="desktop:py-1 desktop:px-3 mx-auto flex h-dvh max-h-dvh min-h-dvh max-w-300 flex-col gap-4 overflow-hidden">
-            <div className="desktop:flex-row desktop:gap-4 relative mx-auto flex h-full min-h-0 w-full flex-col-reverse">
+          <div className="desktop:py-1 desktop:px-3 desktop:gap-2 mx-auto flex h-dvh max-h-dvh min-h-dvh max-w-300 flex-col overflow-hidden">
+            <CallBar />
+            <div className="desktop:flex-row desktop:gap-4 relative mx-auto flex min-h-0 w-full flex-1 flex-col-reverse">
               <NavBar />
               <ResponsiveLayout sidebar={sidebar} extra={extra}>
                 {children}

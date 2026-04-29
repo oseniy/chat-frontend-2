@@ -33,7 +33,7 @@ export const CallBar = () => {
       type="button"
       onClick={handleClick}
       aria-label="Развернуть окно звонка"
-      className="bg-green hover:bg-green-dark flex h-11 w-full items-center justify-between gap-2.5 rounded-b-md px-4 py-2.5 text-white transition-colors"
+      className="bg-green hover:bg-green-dark desktop:rounded-md desktop:rounded-b-md flex h-11 w-full shrink-0 items-center justify-between gap-2.5 px-4 py-2.5 text-white transition-colors"
     >
       <span className="truncate text-base font-semibold">{session.peer.name}</span>
       <span className="flex items-center gap-1 tabular-nums">

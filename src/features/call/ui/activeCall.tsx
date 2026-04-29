@@ -1,5 +1,7 @@
 "use client";
 
+import BackArrow from "@icons/menu/back-arrow.svg";
+
 import { cn } from "@/shared/shadcn/lib/utils";
 
 import { hangupCall, setLocalMuted } from "../lib/callEngine";
@@ -53,10 +55,11 @@ export const ActiveCall = () => {
   return (
     <div
       className={cn(
-        "bg-primary-dark z-50 flex flex-col overflow-hidden text-white shadow-[0_2px_12px_rgba(0,0,0,0.2)]",
+        "bg-primary-dark absolute z-50 flex flex-col overflow-hidden text-white shadow-[0_2px_12px_rgba(0,0,0,0.2)]",
+        "inset-0",
         isFullscreen
-          ? "absolute inset-0 rounded-md"
-          : "absolute top-1/2 left-1/2 h-192.5 w-97 -translate-x-1/2 -translate-y-1/2 rounded-lg",
+          ? "desktop:rounded-md"
+          : "desktop:inset-auto desktop:h-192.5 desktop:w-97 desktop:top-1/2 desktop:left-1/2 desktop:-translate-x-1/2 desktop:-translate-y-1/2 desktop:rounded-lg",
       )}
       role="dialog"
       aria-label="Активный звонок"
@@ -65,9 +68,18 @@ export const ActiveCall = () => {
 
       <button
         type="button"
+        aria-label="Свернуть звонок"
+        onClick={handleMinimize}
+        className="desktop:hidden absolute top-5 left-5 flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+      >
+        <BackArrow className="h-4 w-4" />
+      </button>
+
+      <button
+        type="button"
         aria-label={isFullscreen ? "Свернуть в окно" : "Открыть на весь экран"}
         onClick={handleToggleFullscreen}
-        className="absolute top-5 left-5 flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+        className="desktop:flex absolute top-5 left-5 hidden h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
       >
         {isFullscreen ? <ContractIcon /> : <ExpandIcon />}
       </button>
@@ -76,7 +88,7 @@ export const ActiveCall = () => {
         type="button"
         aria-label="Свернуть звонок"
         onClick={handleMinimize}
-        className="absolute top-5 right-5 flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+        className="desktop:flex absolute top-5 right-5 hidden h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
       >
         <CloseIcon />
       </button>

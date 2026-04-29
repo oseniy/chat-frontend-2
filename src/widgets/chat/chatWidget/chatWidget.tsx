@@ -6,7 +6,6 @@ import { MappedChatDetails } from "@/entities/chat/lib/mapChat";
 import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
 import { UserPreview } from "@/entities/user/model/types";
 import { useUserStore } from "@/entities/user/model/userStore";
-import { CallBar } from "@/features/call";
 import { normalizeChatInfo } from "@/features/chat/chat/lib/normalizeChatInfo";
 import { ChatType } from "@/features/chat/chat/model/types/serverTypes";
 import { cn } from "@/shared/shadcn/lib/utils";
@@ -67,7 +66,6 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
         join={join}
         chatKey={chatKey}
       />
-      <CallBar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Chat
           chatKey={chatKey}
