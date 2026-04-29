@@ -1,3 +1,5 @@
+import { LastMessageCallInfo } from "@/entities/chat/model/types";
+
 import { useChatListStore } from "../model/useChatListStore";
 
 export const optimisticSendMessage = ({
@@ -15,6 +17,7 @@ export const optimisticSendMessage = ({
     created_at: number;
     hasForwarded?: boolean;
     from_user_id: string;
+    message_rtc?: LastMessageCallInfo | null;
   };
 }) => {
   const unreadMessages = useChatListStore.getState().chatsByKey[chatKey]?.unreadMessages;
@@ -29,6 +32,7 @@ export const optimisticSendMessage = ({
       has_forwarded_message: message.hasForwarded,
       new: true,
       from_user: message.from_user_id,
+      message_rtc: message.message_rtc ?? null,
     },
     lastActivityAt: message.created_at,
     unreadMessages: isFromMe ? 0 : unreadMessages + 1,

@@ -84,6 +84,7 @@ export const handleCreateTextMessage: WSHandler = (data) => {
         updated_at: newMessage.createdAt,
         new: true,
         from_user: newMessage.fromUser.uid,
+        message_rtc: newMessage.messageRtc,
       },
       lastActivityAt: newMessage.createdAt,
       avatar: {
@@ -96,9 +97,9 @@ export const handleCreateTextMessage: WSHandler = (data) => {
     };
 
     chatListStore.upsertChat(newChat);
-  } else if (!isMine) {
+  } else if (!isMine || newMessage.messageRtc) {
     optimisticSendMessage({
-      isFromMe: false,
+      isFromMe: isMine,
       chatKey: newMessage.chatKey,
       message: {
         id: newMessage.id,
@@ -113,6 +114,7 @@ export const handleCreateTextMessage: WSHandler = (data) => {
         content: newMessage.content,
         created_at: newMessage.createdAt,
         from_user_id: newMessage.fromUser.uid,
+        message_rtc: newMessage.messageRtc,
       },
     });
   }

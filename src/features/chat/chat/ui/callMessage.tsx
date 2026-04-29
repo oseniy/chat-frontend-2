@@ -1,3 +1,4 @@
+import { getCallTitle } from "@/entities/chat/lib/getCallTitle";
 import CallIcon from "@/shared/ui/icons/chat/call.svg";
 
 import { CallBlock } from "../model/messageBlock/types";
@@ -15,12 +16,6 @@ const formatDuration = (seconds: number) => {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
-};
-
-const getCallTitle = (status: CallBlock["status"], isMine: boolean) => {
-  if (status === "completed") return isMine ? "Исходящий звонок" : "Входящий звонок";
-  if (!isMine && (status === "unreceived" || status === "failed")) return "Пропущенный звонок";
-  return "Отменённый звонок";
 };
 
 const getIconColor = (status: CallBlock["status"], isMine: boolean) => {
