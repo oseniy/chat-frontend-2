@@ -19,6 +19,7 @@ type Props = {
   duration?: number;
   variant?: Variant;
   className?: string;
+  mutedNoticeName?: string | null;
 };
 
 export const CallPeerInfo = ({
@@ -30,6 +31,7 @@ export const CallPeerInfo = ({
   duration = 0,
   variant = "dark",
   className,
+  mutedNoticeName,
 }: Props) => {
   const isLight = variant === "light";
   const textColor = isLight ? "text-black" : "text-white";
@@ -75,6 +77,14 @@ export const CallPeerInfo = ({
             </>
           )}
         </div>
+        <p
+          className={cn(
+            "minitext-tight text-accent text-center font-normal tracking-[0.01em]",
+            !mutedNoticeName && "invisible",
+          )}
+        >
+          {mutedNoticeName || "Placeholder"} отключил(а) микрофон
+        </p>
       </div>
     </div>
   );

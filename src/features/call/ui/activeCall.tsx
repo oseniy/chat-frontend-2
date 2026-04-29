@@ -27,6 +27,7 @@ export const ActiveCall = () => {
   const layoutMode = useCallStore((s) => s.layoutMode);
   const setLayoutMode = useCallStore((s) => s.setLayoutMode);
   const isMuted = useCallStore((s) => s.isMuted);
+  const isRemoteMuted = useCallStore((s) => s.isRemoteMuted);
   const duration = useCallDuration();
 
   if (!session) return null;
@@ -88,6 +89,11 @@ export const ActiveCall = () => {
         showTimer={showTimer}
         duration={duration}
         variant="dark"
+        mutedNoticeName={
+          isRemoteMuted && session.status === "active"
+            ? (session.peer.name.split(" ")[0] ?? session.peer.name)
+            : null
+        }
       />
 
       <div className="flex h-23.5 items-center justify-center rounded-t-4xl">

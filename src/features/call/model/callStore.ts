@@ -7,12 +7,14 @@ export type CallLayoutMode = "window" | "fullscreen" | "minimized";
 type CallStoreState = {
   session: CallSession | null;
   isMuted: boolean;
+  isRemoteMuted: boolean;
   layoutMode: CallLayoutMode;
 
   setSession: (session: CallSession | null) => void;
   patchSession: (patch: Partial<CallSession>) => void;
   setStatus: (status: CallStatus) => void;
   setMuted: (muted: boolean) => void;
+  setRemoteMuted: (muted: boolean) => void;
   setLayoutMode: (mode: CallLayoutMode) => void;
   reset: () => void;
 };
@@ -20,9 +22,11 @@ type CallStoreState = {
 export const useCallStore = create<CallStoreState>((set, get) => ({
   session: null,
   isMuted: false,
+  isRemoteMuted: false,
   layoutMode: "window",
 
-  setSession: (session) => set({ session, isMuted: false, layoutMode: "window" }),
+  setSession: (session) =>
+    set({ session, isMuted: false, isRemoteMuted: false, layoutMode: "window" }),
 
   patchSession: (patch) => {
     const current = get().session;
@@ -40,7 +44,9 @@ export const useCallStore = create<CallStoreState>((set, get) => ({
 
   setMuted: (muted) => set({ isMuted: muted }),
 
+  setRemoteMuted: (muted) => set({ isRemoteMuted: muted }),
+
   setLayoutMode: (layoutMode) => set({ layoutMode }),
 
-  reset: () => set({ session: null, isMuted: false, layoutMode: "window" }),
+  reset: () => set({ session: null, isMuted: false, isRemoteMuted: false, layoutMode: "window" }),
 }));
