@@ -1,16 +1,12 @@
 "use client";
 
-import Image from "next/image";
-
 import { cn } from "@/shared/shadcn/lib/utils";
-import ProfilePhoto from "@/shared/ui/icons/chat/header/profilePhoto.svg";
 
 import { hangupCall, setLocalMuted } from "../lib/callEngine";
-import { formatDuration } from "../lib/formatDuration";
 import { useCallDuration } from "../lib/useCallDuration";
 import { useCallStore } from "../model/callStore";
 import { CallStatus } from "../model/types";
-import { CallingDots } from "./callingDots";
+import { CallPeerInfo } from "./callPeerInfo";
 import { HangupButton } from "./hangupButton";
 import { CloseIcon, ContractIcon, ExpandIcon } from "./icons";
 import { MuteButton } from "./muteButton";
@@ -84,42 +80,15 @@ export const ActiveCall = () => {
         <CloseIcon />
       </button>
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-11 px-4">
-        <div className="bg-primary-third flex h-40 w-40 shrink-0 items-center justify-center rounded-full p-3">
-          <div className="relative h-full w-full overflow-hidden rounded-full bg-white/10">
-            {session.peer.avatarUrl ? (
-              <Image
-                src={session.peer.avatarUrl}
-                alt={session.peer.name}
-                fill
-                sizes="136px"
-                className="object-cover"
-              />
-            ) : (
-              <ProfilePhoto className="h-full w-full text-white/80" />
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center gap-2 px-4">
-          <h2 className="text-center text-2xl font-medium tracking-[0.01em] text-white">
-            {session.peer.name}
-          </h2>
-          <div
-            className="flex items-center justify-center gap-0.5 text-base text-white"
-            aria-live="polite"
-          >
-            {showTimer ? (
-              <span>{formatDuration(duration)}</span>
-            ) : (
-              <>
-                <span>{statusText}</span>
-                {showDots && <CallingDots />}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+      <CallPeerInfo
+        name={session.peer.name}
+        avatarUrl={session.peer.avatarUrl}
+        statusText={statusText}
+        showDots={showDots}
+        showTimer={showTimer}
+        duration={duration}
+        variant="dark"
+      />
 
       <div className="flex h-23.5 items-center justify-center rounded-t-4xl">
         <div className="flex items-center gap-4">

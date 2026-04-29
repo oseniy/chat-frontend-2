@@ -62,6 +62,8 @@
   --gray-transparent: #0000004d;
   --green: #27c840;
   --green-dark: #22b338;
+  --call-reject: #ff383c;
+  --call-accept: #34c759;
 
   /* добавлены цвета для цвета иконок меню навигации */
   --nav-border: #eeeeee;
@@ -158,6 +160,8 @@
   --color-gray-transparent: var(--gray-transparent);
   --color-green: var(--green);
   --color-green-dark: var(--green-dark);
+  --color-call-reject: var(--call-reject);
+  --color-call-accept: var(--call-accept);
   --color-accent-light: var(--accent-light);
 
   /* добавлены переменные для цвета иконок меню навигации */

@@ -2,8 +2,7 @@
 
 import { acceptIncomingCall, rejectIncomingCall } from "../lib/callEngine";
 import { useCallStore } from "../model/callStore";
-import { CallAvatar } from "./callAvatar";
-import { AcceptIcon, HangupIcon } from "./icons";
+import { CallPeerInfo } from "./callPeerInfo";
 
 export const IncomingCall = () => {
   const session = useCallStore((s) => s.session);
@@ -13,34 +12,32 @@ export const IncomingCall = () => {
 
   return (
     <div
-      className="fixed inset-x-0 top-0 z-100 flex justify-center px-3 pt-3"
+      className="bg-accent fixed top-[calc(50%-770px/2+40px)] left-[calc(50%-388px/2)] z-50 flex h-192.5 w-97 flex-col overflow-hidden rounded-md shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
       role="dialog"
       aria-label="Входящий звонок"
     >
-      <div className="desktop:max-w-md flex w-full items-center gap-3 rounded-2xl bg-neutral-900/95 p-3 text-white shadow-xl backdrop-blur">
-        <CallAvatar name={session.peer.name} avatarUrl={session.peer.avatarUrl} size="sm" />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-base font-medium">{session.peer.name}</span>
-          <span className="truncate text-xs text-white/70">Входящий • {modeLabel}</span>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            aria-label="Отклонить"
-            onClick={rejectIncomingCall}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600"
-          >
-            <HangupIcon />
-          </button>
-          <button
-            type="button"
-            aria-label="Принять"
-            onClick={() => void acceptIncomingCall()}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-green-500 text-white hover:bg-green-600"
-          >
-            <AcceptIcon />
-          </button>
-        </div>
+      <CallPeerInfo
+        name={session.peer.name}
+        avatarUrl={session.peer.avatarUrl}
+        statusText={modeLabel}
+        variant="light"
+      />
+
+      <div className="flex gap-5 px-5 pb-5">
+        <button
+          type="button"
+          onClick={rejectIncomingCall}
+          className="bg-call-reject flex h-11 flex-1 items-center justify-center rounded-2xl px-4 py-1.5 text-base text-white transition-opacity hover:opacity-90"
+        >
+          Отклонить
+        </button>
+        <button
+          type="button"
+          onClick={() => void acceptIncomingCall()}
+          className="bg-call-accept flex h-11 flex-1 items-center justify-center rounded-2xl px-4 py-1.5 text-base text-white transition-opacity hover:opacity-90"
+        >
+          Ответить
+        </button>
       </div>
     </div>
   );
