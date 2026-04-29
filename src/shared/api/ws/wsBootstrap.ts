@@ -58,6 +58,7 @@ export const bootstrapWSHandlers = () => {
   registerWSHandler(CALL_WS_ACTIONS.ANSWER, onAnswer as WSHandler);
   registerWSHandler(CALL_WS_ACTIONS.COMPLETION, onCompletion as WSHandler);
   registerWSHandler(CALL_WS_ACTIONS.STATE_UPDATE, onStateUpdate as WSHandler);
+  registerWSHandler(CALL_WS_ACTIONS.NEW_CALL_MESSAGE, handleCreateTextMessage);
 
   // bootstrapCallWSHandlers();
 };
