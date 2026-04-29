@@ -12,7 +12,7 @@ export const IncomingCall = () => {
 
   return (
     <div
-      className="bg-accent fixed top-[calc(50%-770px/2+40px)] left-[calc(50%-388px/2)] z-50 flex h-192.5 w-97 flex-col overflow-hidden rounded-md shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
+      className="bg-accent absolute top-1/2 left-1/2 z-50 flex h-192.5 w-97 -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-md shadow-[0_2px_12px_rgba(0,0,0,0.2)]"
       role="dialog"
       aria-label="Входящий звонок"
     >

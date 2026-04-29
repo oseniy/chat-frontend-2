@@ -55,7 +55,7 @@ export const ActiveCall = () => {
         "bg-primary-dark z-50 flex flex-col overflow-hidden text-white shadow-[0_2px_12px_rgba(0,0,0,0.2)]",
         isFullscreen
           ? "absolute inset-0 rounded-md"
-          : "fixed top-[calc(50%-770px/2+40px)] left-[calc(50%-388px/2)] h-192.5 w-97 rounded-lg",
+          : "absolute top-1/2 left-1/2 h-192.5 w-97 -translate-x-1/2 -translate-y-1/2 rounded-lg",
       )}
       role="dialog"
       aria-label="Активный звонок"
