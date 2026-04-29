@@ -1,9 +1,9 @@
 import { FileText } from "lucide-react";
-import React, { useEffect, useMemo } from "react"; // Добавили useMemo в импорт
+import React, { useEffect, useMemo } from "react";
 
 import { useChatStore } from "@/entities/chat/model/useChatStore";
-import { formatBytes } from "@/shared/lib/formatBytes";
-import { formatDate } from "@/shared/lib/formatDate";
+import { formatBytes } from "@/shared/lib/hooks/formatBytes";
+import { formatDate } from "@/shared/lib/hooks/formatDate";
 import { cn } from "@/shared/shadcn/lib/utils";
 
 type FilesPageProps = {
@@ -26,16 +26,13 @@ export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
     };
   }, [chatKey, fetchFiles, clearFiles]);
 
-  // 1. ПЕРЕНЕСЛИ СЮДА (до условий return)
   const filteredFiles = useMemo(() => {
     return files.filter((file) => {
       const type = file.fileType?.toLowerCase() || "";
-      // Убираем картинки и голосовые, чтобы во вкладке "Файлы" были только документы
       return !type.startsWith("image/") && !type.startsWith("audio/") && type !== "video/webm";
     });
   }, [files]);
 
-  // Функция для принудительного скачивания
   const handleDownload = async (e: React.MouseEvent, url: string, fileName: string) => {
     e.preventDefault();
 
@@ -59,13 +56,21 @@ export const FilesPage: React.FC<FilesPageProps> = ({ className }) => {
     }
   };
 
-  if (isLoading && files.length === 0) {
+  if (isLoading && filteredFiles.length === 0) {
     return <div className="text-muted-foreground p-10 text-center text-sm">Загрузка...</div>;
+  }
+
+  // Добавлена проверка на отсутствие файлов
+  if (!isLoading && filteredFiles.length === 0) {
+    return (
+      <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
+        Файлов пока нет
+      </div>
+    );
   }
 
   return (
     <div className={cn("flex flex-1 flex-col overflow-y-auto", className)}>
-      {/* 2. ИСПОЛЬЗУЕМ filteredFiles ВМЕСТО files */}
       {filteredFiles.map((file, index) => (
         <React.Fragment key={file.uid}>
           <div
