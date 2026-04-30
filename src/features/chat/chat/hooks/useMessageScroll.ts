@@ -36,7 +36,7 @@ export const useMessageScroll = ({
   const lastMessageCountRef = useRef(messages.length);
   const initialScrollDoneRef = useRef(false);
   const isAtBottomRef = useRef(true);
-  const prevChatIdRef = useRef<string | null>(null);
+  const prevChatIdRef = useRef<MappedChatMessage["chatId"] | null>(null);
 
   // Состояния
   const [isAtBottom, setIsAtBottom] = useState(true);

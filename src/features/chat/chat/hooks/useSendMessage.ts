@@ -17,6 +17,7 @@ export const useSendMessage = () => {
     chatKey,
     chatKeyUser,
     chatType,
+    chatId,
     addMessage,
     setFailedStatus,
     replyTarget,
@@ -153,7 +154,7 @@ export const useSendMessage = () => {
         created_at: now,
         updated_at: now,
 
-        chat_id: "",
+        chat_id: chatId ? +chatId : 0,
         chat_key: chatType === "chat" ? chatKeyUser || chatKey : chatKey,
         chat_type: chatType as ChatType,
 
