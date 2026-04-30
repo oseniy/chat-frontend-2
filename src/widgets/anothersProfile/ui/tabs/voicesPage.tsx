@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { MappedMessageFile } from "@/features/chat/chat/model/types/mappedTypes";
 import { formatTime } from "@/shared/lib/format-time";
-import { formatBytes } from "@/shared/lib/formatBytes";
-import { formatDate } from "@/shared/lib/formatDate";
+import { formatBytes } from "@/shared/lib/hooks/formatBytes";
+import { formatDate } from "@/shared/lib/hooks/formatDate";
 import { cn } from "@/shared/shadcn/lib/utils";
 
 interface ExtendedVoiceFile extends MappedMessageFile {

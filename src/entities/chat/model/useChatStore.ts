@@ -241,30 +241,44 @@ export const useChatStore = create<ChatState>((set) => ({
   deleteMessage: (uid) =>
     set((state) => ({ messages: state.messages.filter((msg) => msg.uid !== uid) })),
 
-  addMessage: (message) => {
+  addMessage: (message: MappedChatMessage) => {
     set((state) => {
+      // 1. Обновляем сообщения
+      const updatedMessages = [...state.messages];
       const existingByUidIndex = state.messages.findIndex((msg) => msg.uid === message.uid);
-      if (existingByUidIndex !== -1) {
-        const updated = [...state.messages];
-        updated[existingByUidIndex] = message;
-        return { messages: updated };
-      }
 
-      if (message.requestUid) {
+      if (existingByUidIndex !== -1) {
+        updatedMessages[existingByUidIndex] = message;
+      } else if (message.requestUid) {
         const existingByRequestUidIndex = state.messages.findIndex(
           (msg) => msg.requestUid === message.requestUid,
         );
         if (existingByRequestUidIndex !== -1) {
-          const updated = [...state.messages];
-          updated[existingByRequestUidIndex] = message;
-          return { messages: updated };
+          updatedMessages[existingByRequestUidIndex] = message;
+        } else {
+          updatedMessages.push(message);
         }
+      } else {
+        updatedMessages.push(message);
       }
 
-      return { messages: [...state.messages, message] };
+      // 2. Обновляем медиа (вкладку)
+      // Сначала фильтруем текущие медиа, удаляя старые версии файлов этого сообщения (по uid)
+      // Это решит проблему с "неочищением" и дублями
+      const incomingUids = new Set(message.filesList?.map((f) => f.uid) || []);
+      let updatedMedia = state.media.filter((m) => !incomingUids.has(m.uid));
+
+      if (message.filesList && message.filesList.length > 0) {
+        // Добавляем новые/обновленные файлы в начало
+        updatedMedia = [...message.filesList, ...updatedMedia];
+      }
+
+      return {
+        messages: updatedMessages,
+        media: updatedMedia,
+      };
     });
   },
-
   updateMessageStatus: (uid, status) => {
     set((state) => ({
       messages: state.messages.map((msg) => (msg.uid === uid ? { ...msg, status } : msg)),
