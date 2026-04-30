@@ -70,7 +70,7 @@ export const FileMessage: React.FC<FileMessageProps> = ({
       </div>
       <div className="grid min-w-0 flex-1 grid-cols-1 gap-1">
         <span className="subtext group-hover:text-primary truncate text-black transition-colors duration-300">
-          {truncateFileName(file.donwload_name || file.title || file.src.split("/").pop() || "")}
+          {truncateFileName(file.title || file.src.split("/").pop() || "")}
         </span>
 
         <div className="flex items-center justify-between gap-3">
