@@ -9,7 +9,8 @@ export type MessageBlock =
   | FileBlock
   | MediaBlock
   | InviteLinkBlock
-  | AudioBlock;
+  | AudioBlock
+  | CallBlock;
 
 export type ReplyBlock = {
   type: "reply";
@@ -52,4 +53,12 @@ export type InviteLinkBlock = {
 export type AudioBlock = {
   type: "audio";
   item: MediaItem[];
+};
+
+export type CallStatus = "completed" | "unreceived" | "rejected" | "failed";
+
+export type CallBlock = {
+  type: "call";
+  status: CallStatus;
+  duration: number | null;
 };

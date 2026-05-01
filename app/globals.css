@@ -43,6 +43,7 @@
   --primary-dark: #615aa3;
   --primary-accent: #615aa399;
   --primary-secondary: #9587f5;
+  --primary-third: #827abe;
   --primary-accent-light: #f5f4ff;
   --primary-hover: #efeef7;
   --primary-gray: #efeef7;
@@ -57,7 +58,12 @@
   --gray-tone: #eeeeee;
   --light-green: #d8f5f0;
   --accent: #d6d2f6;
+  --accent-light: #e5e4f7;
   --gray-transparent: #0000004d;
+  --green: #27c840;
+  --green-dark: #22b338;
+  --call-reject: #ff383c;
+  --call-accept: #34c759;
 
   /* добавлены цвета для цвета иконок меню навигации */
   --nav-border: #eeeeee;
@@ -137,6 +143,7 @@
   --color-primary-dark: var(--primary-dark);
   --color-primary-accent: var(--primary-accent);
   --color-primary-secondary: var(--primary-secondary);
+  --color-primary-third: var(--primary-third);
   --color-primary-hover: var(--primary-hover);
   --color-primary-gray: var(--primary-gray);
   --color-muted: var(--muted);
@@ -151,6 +158,11 @@
   --color-light-green: var(--light-green);
   --color-primary-accent-light: var(--primary-accent-light);
   --color-gray-transparent: var(--gray-transparent);
+  --color-green: var(--green);
+  --color-green-dark: var(--green-dark);
+  --color-call-reject: var(--call-reject);
+  --color-call-accept: var(--call-accept);
+  --color-accent-light: var(--accent-light);
 
   /* добавлены переменные для цвета иконок меню навигации */
   --color-nav-border: var(--nav-border);

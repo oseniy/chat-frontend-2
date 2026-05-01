@@ -184,6 +184,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   const showEmptyState = groups.length === 0 && !isInitialLoading;
   const showLoadingState = isInitialLoading || !isReady;
+  console.log("messages groups: ", groups);
 
   return (
     <div className="relative flex h-full min-h-0 flex-col">
