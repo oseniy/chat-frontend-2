@@ -1,22 +1,34 @@
 import { create } from "zustand";
 
-import { getChatFiles } from "@/entities/chat/api/getChatFiles";
+import { ApiLinkItem, getChatLinks } from "@/entities/chat/api/getChatLinks";
 import { MappedChatMessage, MappedMessageFile } from "@/features/chat/chat/model/types/mappedTypes";
 import { MESSAGE_STATUS } from "@/shared/constants/constants";
 
 import { getChatMedia } from "../api/getChatMedia";
 import { ChatType } from "./types";
 
-// Интерфейс для маппинга полей сервера, вынесен за пределы стора
-interface ExtendedServerFile extends MappedMessageFile {
-  file_type?: string;
-  file_url?: string;
-  file_uid?: string;
-  created_at?: number;
-  first_name?: string;
-  last_name?: string;
-  author_name?: string;
-  duration?: number;
+// Интерфейс расширен строго в соответствии с базовым типом
+interface ExtendedMappedMessage extends MappedChatMessage {
+  content: string;
+  author?: {
+    firstName?: string;
+    lastName?: string;
+  };
+  sender?: {
+    firstName?: string;
+    lastName?: string;
+  };
+}
+
+export interface MappedChatLink {
+  url: string;
+  title?: string;
+  fromUser: {
+    firstName: string;
+    lastName: string;
+  };
+  messageId: number;
+  createdAt: number;
 }
 
 interface ChatState {
@@ -26,15 +38,13 @@ interface ChatState {
   chatType: ChatType | null;
   createdBy: string | null;
 
-  // Медиа
   media: MappedMessageFile[];
   isLoadingMedia: boolean;
   isMediaLoaded: boolean;
 
-  // Файлы
-  files: MappedMessageFile[];
-  isLoadingFiles: boolean;
-  isFilesLoaded: boolean;
+  links: MappedChatLink[];
+  isLoadingLinks: boolean;
+  isLinksLoaded: boolean;
 
   chatUid: string | null;
   isReady: boolean;
@@ -46,19 +56,17 @@ interface ChatState {
   forwardTargets: MappedChatMessage[];
 
   fetchMedia: (chatKey: string) => Promise<void>;
-  fetchFiles: (chatKey: string) => Promise<void>;
+  fetchLinks: (chatKey: string) => Promise<void>;
 
   setReplyTarget: (message: MappedChatMessage | null) => void;
   setForwardTargets: (messages: MappedChatMessage[]) => void;
 
   isSelectionMode: boolean;
   selectedMessageUids: Set<string>;
-
   isVoiceRecord: boolean;
 
   enterVoiceRecord: () => void;
   exitVoiceRecord: () => void;
-
   enterSelectionMode: (uid?: string) => void;
   toggleMessageSelection: (uid: string) => void;
   exitSelectionMode: () => void;
@@ -73,7 +81,6 @@ interface ChatState {
     chatKeyUser?: string | null,
     chatUid?: string,
     chatId?: number,
-    forwardTargets?: [],
   ) => void;
   prependMessages: (messages: MappedChatMessage[]) => void;
   addMessage: (message: MappedChatMessage) => void;
@@ -84,7 +91,7 @@ interface ChatState {
   clearForwardTargets: () => void;
   clearReplyTarget: () => void;
   clearMedia: () => void;
-  clearFiles: () => void;
+  clearLinks: () => void;
   reset: () => void;
 }
 
@@ -95,14 +102,13 @@ export const useChatStore = create<ChatState>((set) => ({
   chatUid: null,
   isReady: false,
   chatId: null,
-
   isLoadingMedia: false,
   isMediaLoaded: false,
   media: [],
 
-  files: [],
-  isLoadingFiles: false,
-  isFilesLoaded: false,
+  links: [],
+  isLoadingLinks: false,
+  isLinksLoaded: false,
 
   isHide: false,
   replyTarget: null,
@@ -123,17 +129,14 @@ export const useChatStore = create<ChatState>((set) => ({
   enterVoiceRecord: () => set({ isVoiceRecord: true }),
   exitVoiceRecord: () => set({ isVoiceRecord: false }),
 
-  // ИСПРАВЛЕНО: Заменен тернарный оператор на if/else для прохождения проверки ESLint
   toggleMessageSelection: (uid) =>
     set((state) => {
       const next = new Set(state.selectedMessageUids);
-
       if (next.has(uid)) {
         next.delete(uid);
       } else {
         next.add(uid);
       }
-
       return {
         selectedMessageUids: next,
         isSelectionMode: next.size > 0,
@@ -145,51 +148,102 @@ export const useChatStore = create<ChatState>((set) => ({
     set({ isLoadingMedia: true });
     try {
       const data = await getChatMedia(chatKey);
+      const imagesOnly = (data as unknown as Record<string, unknown>[])
+        .filter((file) => {
+          const type = (file.file_type || file.fileType) as string | undefined;
+          return type?.startsWith("image/") || type?.startsWith("audio/");
+        })
+        .map((file) => ({
+          ...file,
+          fileType: (file.file_type || file.fileType) as string,
+          fileUrl: (file.file_url || file.fileUrl) as string,
+        })) as unknown as MappedMessageFile[];
 
-      // Маппим данные, разрешая и картинки, и аудио
-      const allMedia = (data as ExtendedServerFile[]).map((f): MappedMessageFile => {
-        return {
-          ...f,
-          fileType: f.fileType || f.file_type || "",
-          fileUrl: f.fileUrl || f.file_url || "",
-          uid: f.uid || f.file_uid || "",
-          createdAt: f.createdAt || f.created_at || 0,
-          // Безопасный проброс доп. полей для типизации
-          ...({
-            firstName: f.first_name || f.first_name || "",
-            lastName: f.last_name || f.last_name || "",
-            authorName: f.author_name || f.author_name || "",
-            duration: f.duration || 0,
-          } as Record<string, unknown>),
-        } as MappedMessageFile;
-      });
-
-      set({ media: allMedia, isLoadingMedia: false, isMediaLoaded: true });
+      set({ media: imagesOnly, isLoadingMedia: false, isMediaLoaded: true });
     } catch {
       set({ isLoadingMedia: false, isMediaLoaded: false });
     }
   },
 
-  fetchFiles: async (chatKey: string) => {
+  fetchLinks: async (chatKey: string) => {
     if (!chatKey) return;
-
-    set({
-      isLoadingFiles: true,
-      files: [],
-      isFilesLoaded: false,
-    });
-
+    set({ isLoadingLinks: true, isLinksLoaded: false });
     try {
-      const data = await getChatFiles(chatKey);
-      set({
-        files: data,
-        isLoadingFiles: false,
-        isFilesLoaded: true,
-      });
-    } catch (error) {
-      set({ isLoadingFiles: false, isFilesLoaded: false });
-      console.error("Ошибка загрузки файлов:", error);
+      const results = await getChatLinks(chatKey);
+      const mappedLinks: MappedChatLink[] = results.map((item: ApiLinkItem) => ({
+        url: item.url,
+        title: item.title ?? undefined,
+        fromUser: {
+          firstName: item.from_user?.first_name || "",
+          lastName: item.from_user?.last_name || "",
+        },
+        messageId: item.message_id,
+        createdAt: item.created_at,
+      }));
+      set({ links: mappedLinks, isLoadingLinks: false, isLinksLoaded: true });
+    } catch {
+      set({ isLoadingLinks: false, isLinksLoaded: false });
     }
+  },
+
+  addMessage: (message) => {
+    set((state) => {
+      const msg = message as ExtendedMappedMessage;
+      const existingByUidIndex = state.messages.findIndex((m) => m.uid === msg.uid);
+      const updatedMessages = [...state.messages];
+
+      if (existingByUidIndex !== -1) {
+        updatedMessages[existingByUidIndex] = message;
+      } else if (msg.requestUid) {
+        const idx = state.messages.findIndex((m) => m.requestUid === msg.requestUid);
+        if (idx !== -1) {
+          updatedMessages[idx] = message;
+        } else {
+          updatedMessages.push(message);
+        }
+      } else {
+        updatedMessages.push(message);
+      }
+
+      // Извлечение ссылок с УСИЛЕННОЙ проверкой на дубликаты
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const messageContent = msg.content || "";
+      const foundUrls = messageContent.match(urlRegex);
+      let updatedLinks = [...state.links];
+
+      if (foundUrls) {
+        const newLinks: MappedChatLink[] = foundUrls
+          .map((url: string) => ({
+            url,
+            title: undefined,
+            fromUser: {
+              firstName: msg.author?.firstName || msg.sender?.firstName || "",
+              lastName: msg.author?.lastName || msg.sender?.lastName || "",
+            },
+            messageId: Number(msg.id) || 0,
+            createdAt: Math.floor(Date.now() / 1000),
+          }))
+          .filter((newLink) => {
+            // Если ссылка с таким URL уже есть в этом чате (с тем же messageId или просто в списке), не добавляем
+            // Это решает проблему дублей при мгновенном отображении + сокет/бэк
+            const isAlreadyExists = state.links.some(
+              (existing) =>
+                existing.url === newLink.url &&
+                (existing.messageId === newLink.messageId || newLink.messageId === 0),
+            );
+            return !isAlreadyExists;
+          });
+
+        if (newLinks.length > 0) {
+          updatedLinks = [...newLinks, ...updatedLinks];
+        }
+      }
+
+      return {
+        messages: updatedMessages,
+        links: updatedLinks,
+      };
+    });
   },
 
   exitSelectionMode: () =>
@@ -227,9 +281,7 @@ export const useChatStore = create<ChatState>((set) => ({
       const existingUids = new Set(state.messages.map((msg) => msg.uid));
       const uniqueNewMessages = newMessages.filter((msg) => !existingUids.has(msg.uid));
       if (uniqueNewMessages.length === 0) return state;
-      return {
-        messages: [...uniqueNewMessages, ...state.messages],
-      };
+      return { messages: [...uniqueNewMessages, ...state.messages] };
     });
   },
 
@@ -237,71 +289,26 @@ export const useChatStore = create<ChatState>((set) => ({
   clearReplyTarget: () => set({ replyTarget: null }),
   setForwardTargets: (messages) => set({ forwardTargets: messages }),
   clearForwardTargets: () => set({ forwardTargets: [] }),
-
   deleteMessage: (uid) =>
     set((state) => ({ messages: state.messages.filter((msg) => msg.uid !== uid) })),
-
-  addMessage: (message: MappedChatMessage) => {
-    set((state) => {
-      // 1. Обновляем сообщения
-      const updatedMessages = [...state.messages];
-      const existingByUidIndex = state.messages.findIndex((msg) => msg.uid === message.uid);
-
-      if (existingByUidIndex !== -1) {
-        updatedMessages[existingByUidIndex] = message;
-      } else if (message.requestUid) {
-        const existingByRequestUidIndex = state.messages.findIndex(
-          (msg) => msg.requestUid === message.requestUid,
-        );
-        if (existingByRequestUidIndex !== -1) {
-          updatedMessages[existingByRequestUidIndex] = message;
-        } else {
-          updatedMessages.push(message);
-        }
-      } else {
-        updatedMessages.push(message);
-      }
-
-      // 2. Обновляем медиа (вкладку)
-      // Сначала фильтруем текущие медиа, удаляя старые версии файлов этого сообщения (по uid)
-      // Это решит проблему с "неочищением" и дублями
-      const incomingUids = new Set(message.filesList?.map((f) => f.uid) || []);
-      let updatedMedia = state.media.filter((m) => !incomingUids.has(m.uid));
-
-      if (message.filesList && message.filesList.length > 0) {
-        // Добавляем новые/обновленные файлы в начало
-        updatedMedia = [...message.filesList, ...updatedMedia];
-      }
-
-      return {
-        messages: updatedMessages,
-        media: updatedMedia,
-      };
-    });
-  },
-  updateMessageStatus: (uid, status) => {
+  updateMessageStatus: (uid, status) =>
     set((state) => ({
       messages: state.messages.map((msg) => (msg.uid === uid ? { ...msg, status } : msg)),
-    }));
-  },
-
-  markAsRead: (uid) => {
+    })),
+  markAsRead: (uid) =>
     set((state) => ({
       messages: state.messages.map((msg) => (msg.uid === uid ? { ...msg, isNew: false } : msg)),
-    }));
-  },
-
-  setFailedStatus: (requestUid) => {
+    })),
+  setFailedStatus: (requestUid) =>
     set((state) => ({
       messages: state.messages.map((msg) =>
         msg.requestUid === requestUid ? { ...msg, status: MESSAGE_STATUS.FAILED } : msg,
       ),
-    }));
-  },
+    })),
 
-  clearMessages: () => set({ messages: [], replyTarget: null }),
+  clearMessages: () => set({ messages: [], replyTarget: null, links: [], isLinksLoaded: false }),
   clearMedia: () => set({ media: [], isLoadingMedia: false, isMediaLoaded: false }),
-  clearFiles: () => set({ files: [], isLoadingFiles: false, isFilesLoaded: false }),
+  clearLinks: () => set({ links: [], isLoadingLinks: false, isLinksLoaded: false }),
 
   reset: () =>
     set({
@@ -311,10 +318,10 @@ export const useChatStore = create<ChatState>((set) => ({
       isReady: false,
       replyTarget: null,
       media: [],
-      files: [],
+      links: [],
       isLoadingMedia: false,
+      isLoadingLinks: false,
       isMediaLoaded: false,
-      isLoadingFiles: false,
-      isFilesLoaded: false,
+      isLinksLoaded: false,
     }),
 }));
