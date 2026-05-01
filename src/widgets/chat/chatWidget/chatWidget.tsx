@@ -50,7 +50,7 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
   const chatAvatar = chatInfo.avatar || chatInfo.avatarUrl || "";
 
   return (
-    <div className={cn("desktop:h-full flex h-dvh w-full flex-col", className)}>
+    <div className={cn("desktop:h-full flex max-h-dvh w-full flex-col", className)}>
       <ChatHeader
         profileHref={`/chats/${chatKey}/profile`}
         backHref="/chats"

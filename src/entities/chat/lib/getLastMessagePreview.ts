@@ -9,11 +9,18 @@ import {
   VIDEO_TYPES,
 } from "../../../features/chatList/model/constants";
 import { GetLastMessagePreviewParams, LastMessagePreview, PreviewIconType } from "../model/types";
+import { getCallTitle } from "./getCallTitle";
 
 export const getLastMessagePreview = ({
   content,
   files,
+  call,
+  isMine,
 }: GetLastMessagePreviewParams): LastMessagePreview => {
+  if (call) {
+    return { icons: [], text: getCallTitle(call.status, Boolean(isMine)) };
+  }
+
   if (!files || files.count === 0) {
     return { icons: [], text: content || "Сообщений нет" };
   }

@@ -43,6 +43,7 @@ type PendingIncoming = {
 let pc: RTCPeerConnection | null = null;
 let localStream: MediaStream | null = null;
 let remoteStream: MediaStream | null = null;
+let muteChannel: RTCDataChannel | null = null;
 let currentMessageRtcUid: string | null = null;
 let currentOwnerUid: string | null = null;
 let currentPeerUid: string | null = null;
@@ -208,11 +209,57 @@ const closePeerConnection = () => {
     pc.ontrack = null;
     pc.onconnectionstatechange = null;
     pc.oniceconnectionstatechange = null;
+    pc.ondatachannel = null;
     pc.close();
   } catch {
     // noop
   }
   pc = null;
+};
+
+const closeMuteChannel = () => {
+  if (!muteChannel) return;
+  try {
+    muteChannel.onopen = null;
+    muteChannel.onmessage = null;
+    muteChannel.onclose = null;
+    muteChannel.close();
+  } catch {
+    // noop
+  }
+  muteChannel = null;
+};
+
+const sendLocalMutedThroughChannel = () => {
+  if (!muteChannel || muteChannel.readyState !== "open") return;
+  try {
+    muteChannel.send(JSON.stringify({ type: "mute", muted: useCallStore.getState().isMuted }));
+  } catch (error) {
+    console.warn(`${LOG} mute channel send failed`, error);
+  }
+};
+
+const bindMuteChannel = (channel: RTCDataChannel) => {
+  muteChannel = channel;
+  channel.onopen = () => {
+    sendLocalMutedThroughChannel();
+  };
+  channel.onmessage = (event) => {
+    try {
+      const data = JSON.parse(typeof event.data === "string" ? event.data : "") as {
+        type?: string;
+        muted?: boolean;
+      };
+      if (data?.type === "mute" && typeof data.muted === "boolean") {
+        useCallStore.getState().setRemoteMuted(data.muted);
+      }
+    } catch {
+      // ignore non-JSON payloads
+    }
+  };
+  channel.onclose = () => {
+    if (muteChannel === channel) muteChannel = null;
+  };
 };
 
 const cleanup = () => {
@@ -222,6 +269,7 @@ const cleanup = () => {
   });
 
   clearConnectTimeout();
+  closeMuteChannel();
   closePeerConnection();
   stopLocalStream();
   stopRemoteStream();
@@ -408,6 +456,12 @@ const createPeerConnection = (iceServers: RTCIceServer[]) => {
     console.log(`${LOG} signalingState → ${connection.signalingState}`);
   };
 
+  connection.ondatachannel = (event) => {
+    if (event.channel.label === "call-state") {
+      bindMuteChannel(event.channel);
+    }
+  };
+
   connection.ontrack = (event) => {
     console.log(`${LOG} ontrack`, {
       kind: event.track.kind,
@@ -551,6 +605,7 @@ export const startOutgoingCall = async (opts: {
 
   const iceServers = await resolveIceServers();
   pc = createPeerConnection(iceServers);
+  bindMuteChannel(pc.createDataChannel("call-state"));
   localStream.getTracks().forEach((track) => pc!.addTrack(track, localStream!));
 
   let offer: RTCSessionDescriptionInit;
@@ -875,4 +930,5 @@ export const setLocalMuted = (muted: boolean) => {
     track.enabled = !muted;
   });
   useCallStore.getState().setMuted(muted);
+  sendLocalMutedThroughChannel();
 };
