@@ -1,4 +1,8 @@
-export const downloadFile = async (fileUrl: string, fileName?: string): Promise<boolean> => {
+export const downloadFile = async (
+  fileUrl: string,
+  fileName?: string,
+  fileNameForDownload?: string,
+): Promise<boolean> => {
   try {
     const proxyUrl = `/api/download?url=${encodeURIComponent(fileUrl)}${
       fileName ? `&name=${encodeURIComponent(fileName)}` : ""
@@ -15,7 +19,7 @@ export const downloadFile = async (fileUrl: string, fileName?: string): Promise<
 
     const blob = await response.blob();
 
-    let finalFileName = fileName;
+    let finalFileName = fileNameForDownload;
     if (!finalFileName) {
       const urlParts = fileUrl.split("/");
       finalFileName = urlParts[urlParts.length - 1] || "download";

@@ -38,7 +38,7 @@ export const FileMessage: React.FC<FileMessageProps> = ({
       return;
     }
 
-    downloadFile(file.src, file.title || file.src.split("/").pop());
+    downloadFile(file.src, file.src.split("/").pop(), file.title);
   };
 
   const formatFileSize = (bytes: number | null) => {
