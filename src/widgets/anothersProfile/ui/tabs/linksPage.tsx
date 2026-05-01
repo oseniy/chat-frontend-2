@@ -26,7 +26,7 @@ const LinkItem = ({ link, isLast }: { link: MappedChatLink; isLast: boolean }) =
         href={link.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex items-center gap-3 p-4 transition-colors hover:bg-black/5"
+        className="group flex items-center gap-3 p-4 transition-colors"
       >
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-[#6b5cd9] text-[18px] font-bold text-white">
           {firstLetter}
