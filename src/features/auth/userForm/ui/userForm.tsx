@@ -69,18 +69,31 @@ export const UserForm: React.FC<UserFormProps> = ({ className }) => {
               id="firstName"
               label="Введите имя"
               error={errors.firstName?.message}
-              {...register("firstName", {
-                onChange: (e) => {
-                  let value = e.target.value;
+              {...register("firstName")}
+              onKeyDown={(e) => {
+                const input = e.target as HTMLInputElement;
 
-                  value = value
-                    .replace(/\s*-\s*/g, "-")
-                    .replace(/\s{2,}/g, " ")
-                    .replace(/^\s+/, "");
+                const { selectionStart, selectionEnd } = input;
 
-                  e.target.value = value;
-                },
-              })}
+                const isReplacingFromStart =
+                  selectionStart === 0 && selectionEnd !== null && selectionEnd > 0;
+
+                const isCursorAtStart = selectionStart === 0 && selectionEnd === 0;
+
+                if (e.key === " " && (isCursorAtStart || isReplacingFromStart)) {
+                  e.preventDefault();
+                }
+              }}
+              onChange={(e) => {
+                let value = e.target.value;
+
+                value = value.replace(/\s*-\s*/g, "-").replace(/\s{2,}/g, " ");
+
+                form.setValue("firstName", value, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                });
+              }}
             />
 
             <NicknameInput name="nickname" />

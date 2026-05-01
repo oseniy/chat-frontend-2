@@ -2,9 +2,12 @@ import { z } from "zod";
 
 const firstNameSchema = z
   .string()
-  .refine((val) => !/^\s/.test(val), {
-    message: "Имя не может начинаться с пробела",
-  })
+  .transform((val) =>
+    val
+      .replace(/\s*-\s*/g, "-")
+      .replace(/\s{2,}/g, " ")
+      .trimStart(),
+  )
   .pipe(
     z
       .string()
