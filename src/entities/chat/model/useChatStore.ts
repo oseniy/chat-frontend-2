@@ -7,7 +7,6 @@ import { MESSAGE_STATUS } from "@/shared/constants/constants";
 import { getChatMedia } from "../api/getChatMedia";
 import { ChatType } from "./types";
 
-// Интерфейс расширен строго в соответствии с базовым типом
 interface ExtendedMappedMessage extends MappedChatMessage {
   content: string;
   author?: {
@@ -205,11 +204,12 @@ export const useChatStore = create<ChatState>((set) => ({
         updatedMessages.push(message);
       }
 
-      // Извлечение ссылок с УСИЛЕННОЙ проверкой на дубликаты
       const urlRegex = /(https?:\/\/[^\s]+)/g;
       const messageContent = msg.content || "";
       const foundUrls = messageContent.match(urlRegex);
-      let updatedLinks = [...state.links];
+
+      // ИСПРАВЛЕНО: Используем const для eslint
+      const currentLinks = [...state.links];
 
       if (foundUrls) {
         const newLinks: MappedChatLink[] = foundUrls
@@ -224,24 +224,18 @@ export const useChatStore = create<ChatState>((set) => ({
             createdAt: Math.floor(Date.now() / 1000),
           }))
           .filter((newLink) => {
-            // Если ссылка с таким URL уже есть в этом чате (с тем же messageId или просто в списке), не добавляем
-            // Это решает проблему дублей при мгновенном отображении + сокет/бэк
-            const isAlreadyExists = state.links.some(
-              (existing) =>
-                existing.url === newLink.url &&
-                (existing.messageId === newLink.messageId || newLink.messageId === 0),
-            );
-            return !isAlreadyExists;
+            // Строгая проверка по URL, чтобы не было дублей при открытой вкладке
+            return !state.links.some((existing) => existing.url === newLink.url);
           });
 
         if (newLinks.length > 0) {
-          updatedLinks = [...newLinks, ...updatedLinks];
+          currentLinks.unshift(...newLinks);
         }
       }
 
       return {
         messages: updatedMessages,
-        links: updatedLinks,
+        links: currentLinks,
       };
     });
   },
