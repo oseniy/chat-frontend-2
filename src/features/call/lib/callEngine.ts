@@ -43,6 +43,7 @@ type PendingIncoming = {
 let pc: RTCPeerConnection | null = null;
 let localStream: MediaStream | null = null;
 let remoteStream: MediaStream | null = null;
+let muteChannel: RTCDataChannel | null = null;
 let currentMessageRtcUid: string | null = null;
 let currentOwnerUid: string | null = null;
 let currentPeerUid: string | null = null;
@@ -50,9 +51,126 @@ let pendingIncoming: PendingIncoming | null = null;
 let isRemoteDescriptionSet = false;
 let connectedStateReported = false;
 let completionSent = false;
+let connectTimeoutId: ReturnType<typeof setTimeout> | null = null;
+let statsDumpTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const pendingLocalIce: string[] = [];
 const pendingRemoteIce: RTCIceCandidateInit[] = [];
+
+const localCandidateSummary = { host: 0, srflx: 0, prflx: 0, relay: 0, other: 0 };
+const remoteCandidateSummary = { host: 0, srflx: 0, prflx: 0, relay: 0, other: 0 };
+
+const LOG = "[call]";
+
+const bumpSummary = (summary: typeof localCandidateSummary, type: string) => {
+  if (type === "host" || type === "srflx" || type === "prflx" || type === "relay") {
+    summary[type] += 1;
+  } else {
+    summary.other += 1;
+  }
+};
+
+const dumpStats = async (label: string) => {
+  if (!pc) return;
+  try {
+    const stats = await pc.getStats();
+    const candidates = new Map<string, RTCIceCandidatePairStats | RTCIceCandidate | unknown>();
+    let selectedPairId: string | null = null;
+    let nominatedPair: RTCIceCandidatePairStats | null = null;
+
+    stats.forEach((report) => {
+      if (
+        report.type === "transport" &&
+        (report as { selectedCandidatePairId?: string }).selectedCandidatePairId
+      ) {
+        selectedPairId =
+          (report as { selectedCandidatePairId?: string }).selectedCandidatePairId ?? null;
+      }
+    });
+
+    stats.forEach((report) => {
+      if (report.type === "local-candidate" || report.type === "remote-candidate") {
+        candidates.set(report.id, report);
+      }
+      if (report.type === "candidate-pair") {
+        const pair = report as RTCIceCandidatePairStats & {
+          nominated?: boolean;
+          selected?: boolean;
+        };
+        if (pair.nominated || pair.selected || pair.id === selectedPairId) {
+          nominatedPair = pair;
+        }
+      }
+    });
+
+    if (nominatedPair) {
+      const pair = nominatedPair as RTCIceCandidatePairStats & {
+        localCandidateId: string;
+        remoteCandidateId: string;
+      };
+      const local = candidates.get(pair.localCandidateId) as
+        | (RTCIceCandidate & { candidateType?: string; protocol?: string; relayProtocol?: string })
+        | undefined;
+      const remote = candidates.get(pair.remoteCandidateId) as
+        | (RTCIceCandidate & { candidateType?: string; protocol?: string })
+        | undefined;
+      console.log(`${LOG} stats[${label}] selected pair`, {
+        state: pair.state,
+        local: local && {
+          type: local.candidateType,
+          protocol: local.protocol,
+          relayProtocol: local.relayProtocol,
+        },
+        remote: remote && {
+          type: remote.candidateType,
+          protocol: remote.protocol,
+        },
+      });
+    } else {
+      console.warn(`${LOG} stats[${label}] no selected/nominated pair yet`);
+      const pairs: unknown[] = [];
+      stats.forEach((report) => {
+        if (report.type === "candidate-pair") pairs.push(report);
+      });
+      console.warn(`${LOG} stats[${label}] candidate pairs (${pairs.length})`, pairs);
+    }
+  } catch (error) {
+    console.warn(`${LOG} dumpStats failed`, error);
+  }
+};
+
+const clearConnectTimeout = () => {
+  if (connectTimeoutId !== null) {
+    clearTimeout(connectTimeoutId);
+    connectTimeoutId = null;
+  }
+  if (statsDumpTimeoutId !== null) {
+    clearTimeout(statsDumpTimeoutId);
+    statsDumpTimeoutId = null;
+  }
+};
+
+const armConnectTimeout = () => {
+  clearConnectTimeout();
+  // Если за 8 сек ICE не нашёл пары — снимаем стейт-снимок (без обрыва).
+  statsDumpTimeoutId = setTimeout(() => {
+    void dumpStats("8s-checkpoint");
+  }, 8000);
+  // Жёсткий таймаут на установление соединения — иначе залипает в "connecting" навсегда.
+  connectTimeoutId = setTimeout(() => {
+    if (connectedStateReported) return;
+    console.error(`${LOG} connect timeout — ICE never reached connected state`, {
+      iceConnectionState: pc?.iceConnectionState,
+      connectionState: pc?.connectionState,
+      iceGatheringState: pc?.iceGatheringState,
+      signalingState: pc?.signalingState,
+      localCandidateSummary,
+      remoteCandidateSummary,
+    });
+    void dumpStats("timeout");
+    reportFailed("connection_timeout", "Не удалось соединиться");
+  }, 30000);
+};
 
 const remoteStreamListeners = new Set<(stream: MediaStream | null) => void>();
 
@@ -91,6 +209,7 @@ const closePeerConnection = () => {
     pc.ontrack = null;
     pc.onconnectionstatechange = null;
     pc.oniceconnectionstatechange = null;
+    pc.ondatachannel = null;
     pc.close();
   } catch {
     // noop
@@ -98,9 +217,59 @@ const closePeerConnection = () => {
   pc = null;
 };
 
-const cleanup = () => {
-  console.log("cleanup");
+const closeMuteChannel = () => {
+  if (!muteChannel) return;
+  try {
+    muteChannel.onopen = null;
+    muteChannel.onmessage = null;
+    muteChannel.onclose = null;
+    muteChannel.close();
+  } catch {
+    // noop
+  }
+  muteChannel = null;
+};
 
+const sendLocalMutedThroughChannel = () => {
+  if (!muteChannel || muteChannel.readyState !== "open") return;
+  try {
+    muteChannel.send(JSON.stringify({ type: "mute", muted: useCallStore.getState().isMuted }));
+  } catch (error) {
+    console.warn(`${LOG} mute channel send failed`, error);
+  }
+};
+
+const bindMuteChannel = (channel: RTCDataChannel) => {
+  muteChannel = channel;
+  channel.onopen = () => {
+    sendLocalMutedThroughChannel();
+  };
+  channel.onmessage = (event) => {
+    try {
+      const data = JSON.parse(typeof event.data === "string" ? event.data : "") as {
+        type?: string;
+        muted?: boolean;
+      };
+      if (data?.type === "mute" && typeof data.muted === "boolean") {
+        useCallStore.getState().setRemoteMuted(data.muted);
+      }
+    } catch {
+      // ignore non-JSON payloads
+    }
+  };
+  channel.onclose = () => {
+    if (muteChannel === channel) muteChannel = null;
+  };
+};
+
+const cleanup = () => {
+  console.log(`${LOG} cleanup`, {
+    localCandidateSummary: { ...localCandidateSummary },
+    remoteCandidateSummary: { ...remoteCandidateSummary },
+  });
+
+  clearConnectTimeout();
+  closeMuteChannel();
   closePeerConnection();
   stopLocalStream();
   stopRemoteStream();
@@ -113,6 +282,12 @@ const cleanup = () => {
   completionSent = false;
   pendingLocalIce.length = 0;
   pendingRemoteIce.length = 0;
+  Object.keys(localCandidateSummary).forEach((k) => {
+    localCandidateSummary[k as keyof typeof localCandidateSummary] = 0;
+  });
+  Object.keys(remoteCandidateSummary).forEach((k) => {
+    remoteCandidateSummary[k as keyof typeof remoteCandidateSummary] = 0;
+  });
 };
 
 const finishCall = (reason?: string) => {
@@ -130,23 +305,69 @@ const finishCall = (reason?: string) => {
   }, 1200);
 };
 
+const summariseIceServers = (servers: RTCIceServer[]) =>
+  servers.map((s) => {
+    const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+    return {
+      urls,
+      hasUsername: Boolean(s.username),
+      hasCredential: Boolean(s.credential),
+    };
+  });
+
 const resolveIceServers = async (): Promise<RTCIceServer[]> => {
   const result = await getIceServers();
-  if (result.success && result.data.length > 0) return result.data;
+  if (result.success && result.data.length > 0) {
+    const hasTurn = result.data.some((s) => {
+      const urls = Array.isArray(s.urls) ? s.urls : [s.urls];
+      return urls.some((u) => u.startsWith("turn:") || u.startsWith("turns:"));
+    });
+    console.log(`${LOG} ICE servers resolved`, {
+      count: result.data.length,
+      hasTurn,
+      servers: summariseIceServers(result.data),
+    });
+    if (!hasTurn) {
+      console.warn(
+        `${LOG} no TURN servers in config — peers behind symmetric NAT will not connect`,
+      );
+    }
+    return result.data;
+  }
+  console.warn(`${LOG} falling back to default STUN-only ICE servers`, {
+    success: result.success,
+    error: result.success ? null : result.error,
+  });
   return CALL_DEFAULT_ICE_SERVERS;
 };
 
+// Бэк проверяет участников звонка по полю from_user_uid: оно должно совпадать
+// с инициатором (caller'ом) сессии, а не с фактическим отправителем сообщения.
+// Это та же конвенция направления, что используется у answer_call (см. комментарий
+// в callWsHandlers.ts/onAnswer). Если callee отправит ICE/state_update с
+// from_user_uid = собственный uid, бэк отбрасывает сообщение с ошибкой
+// «Участники звонка не совпадают с сохраненной сессией»: для ICE ошибка
+// глушится в try/catch и кандидаты тихо теряются, для state_update приходит
+// явная ошибка. На localhost (две вкладки в одной сети) prflx-кандидаты
+// замыкают пару без участия сигналинга, поэтому баг там не виден.
+const buildDirectionRouting = (): { from_user_uid: string; to_user_uid: string } | null => {
+  if (!currentOwnerUid || !currentPeerUid) return null;
+  const isCaller = useCallStore.getState().session?.isCaller ?? false;
+  return isCaller
+    ? { from_user_uid: currentOwnerUid, to_user_uid: currentPeerUid }
+    : { from_user_uid: currentPeerUid, to_user_uid: currentOwnerUid };
+};
+
 const flushPendingLocalIce = () => {
-  if (!currentMessageRtcUid || !currentOwnerUid || !currentPeerUid) return;
+  if (!currentMessageRtcUid) return;
+  const routing = buildDirectionRouting();
+  if (!routing) return;
   const messageRtcUid = currentMessageRtcUid;
-  const ownerUid = currentOwnerUid;
-  const peerUid = currentPeerUid;
   while (pendingLocalIce.length > 0) {
     const ice_candidate = pendingLocalIce.shift();
     if (!ice_candidate) continue;
     void sendIceCandidate({
-      from_user_uid: ownerUid,
-      to_user_uid: peerUid,
+      ...routing,
       message_rtc_uid: messageRtcUid,
       ice_candidate,
     });
@@ -167,24 +388,85 @@ const flushPendingRemoteIce = async () => {
 };
 
 const createPeerConnection = (iceServers: RTCIceServer[]) => {
-  const connection = new RTCPeerConnection({ iceServers });
+  const connection = new RTCPeerConnection({
+    iceServers,
+    // max-bundle и одна транспортная сессия → меньше пар для проверки,
+    // быстрее и стабильнее ICE на мобильных сетях.
+    bundlePolicy: "max-bundle",
+    rtcpMuxPolicy: "require",
+    // Префетчим ICE-кандидаты, чтобы к моменту setLocalDescription они уже были.
+    iceCandidatePoolSize: 4,
+  });
+  console.log(`${LOG} RTCPeerConnection created`, {
+    iceServersCount: iceServers.length,
+  });
 
   connection.onicecandidate = (event) => {
-    if (!event.candidate) return;
-    const ice_candidate = JSON.stringify(event.candidate.toJSON());
+    if (!event.candidate) {
+      console.log(`${LOG} ICE gathering finished`, {
+        local: { ...localCandidateSummary },
+      });
+      return;
+    }
+    const cand = event.candidate;
+    bumpSummary(localCandidateSummary, cand.type ?? "other");
+    console.log(`${LOG} local ICE candidate`, {
+      type: cand.type,
+      protocol: cand.protocol,
+      relayProtocol: (cand as RTCIceCandidate & { relayProtocol?: string }).relayProtocol,
+      address: cand.address ?? cand.candidate?.split(" ")[4],
+      port: cand.port,
+      tcpType: cand.tcpType,
+      raw: cand.candidate,
+    });
+    const ice_candidate = JSON.stringify(cand.toJSON());
     if (!currentMessageRtcUid || !currentOwnerUid || !currentPeerUid) {
       pendingLocalIce.push(ice_candidate);
       return;
     }
+    const routing = buildDirectionRouting();
+    if (!routing) {
+      pendingLocalIce.push(ice_candidate);
+      return;
+    }
     void sendIceCandidate({
-      from_user_uid: currentOwnerUid,
-      to_user_uid: currentPeerUid,
+      ...routing,
       message_rtc_uid: currentMessageRtcUid,
       ice_candidate,
     });
   };
 
+  connection.onicecandidateerror = (event) => {
+    const e = event as RTCPeerConnectionIceErrorEvent;
+    // 701 = STUN/TURN не отвечает; 401/403 — bad creds; 300+ — server error
+    console.warn(`${LOG} ICE candidate error`, {
+      url: e.url,
+      address: e.address,
+      port: e.port,
+      errorCode: e.errorCode,
+      errorText: e.errorText,
+    });
+  };
+
+  connection.onicegatheringstatechange = () => {
+    console.log(`${LOG} iceGatheringState → ${connection.iceGatheringState}`);
+  };
+
+  connection.onsignalingstatechange = () => {
+    console.log(`${LOG} signalingState → ${connection.signalingState}`);
+  };
+
+  connection.ondatachannel = (event) => {
+    if (event.channel.label === "call-state") {
+      bindMuteChannel(event.channel);
+    }
+  };
+
   connection.ontrack = (event) => {
+    console.log(`${LOG} ontrack`, {
+      kind: event.track.kind,
+      streamCount: event.streams.length,
+    });
     if (!remoteStream) {
       remoteStream = new MediaStream();
     }
@@ -199,13 +481,17 @@ const createPeerConnection = (iceServers: RTCIceServer[]) => {
 
   connection.onconnectionstatechange = () => {
     const state = connection.connectionState;
+    console.log(`${LOG} connectionState → ${state}`);
     const store = useCallStore.getState();
     if (!store.session) return;
 
     if (state === "connected") {
       store.setStatus("active");
       reportConnected();
+      clearConnectTimeout();
+      void dumpStats("connected");
     } else if (state === "failed") {
+      void dumpStats("failed");
       reportFailed("peer_connection_failed", "Соединение прервано");
     } else if (state === "disconnected") {
       if (store.session.status !== "ended") {
@@ -219,7 +505,10 @@ const createPeerConnection = (iceServers: RTCIceServer[]) => {
   };
 
   connection.oniceconnectionstatechange = () => {
-    if (connection.iceConnectionState === "failed") {
+    const state = connection.iceConnectionState;
+    console.log(`${LOG} iceConnectionState → ${state}`);
+    if (state === "failed") {
+      void dumpStats("ice-failed");
       reportFailed("ice_failed", "Соединение прервано");
     }
   };
@@ -229,11 +518,12 @@ const createPeerConnection = (iceServers: RTCIceServer[]) => {
 
 const reportConnected = () => {
   if (connectedStateReported) return;
-  if (!currentMessageRtcUid || !currentOwnerUid || !currentPeerUid) return;
+  if (!currentMessageRtcUid) return;
+  const routing = buildDirectionRouting();
+  if (!routing) return;
   connectedStateReported = true;
   void sendCallStateUpdate({
-    from_user_uid: currentOwnerUid,
-    to_user_uid: currentPeerUid,
+    ...routing,
     message_rtc_uid: currentMessageRtcUid,
     state: "connected",
   });
@@ -243,14 +533,16 @@ const reportFailed = (reasonCode: CallReasonCode, userReason: string) => {
   const store = useCallStore.getState();
   const session = store.session;
   if (!session || session.status === "ended") return;
-  if (currentMessageRtcUid && currentOwnerUid && currentPeerUid) {
-    void sendCallStateUpdate({
-      from_user_uid: currentOwnerUid,
-      to_user_uid: currentPeerUid,
-      message_rtc_uid: currentMessageRtcUid,
-      state: "failed",
-      reason_code: reasonCode,
-    });
+  if (currentMessageRtcUid) {
+    const routing = buildDirectionRouting();
+    if (routing) {
+      void sendCallStateUpdate({
+        ...routing,
+        message_rtc_uid: currentMessageRtcUid,
+        state: "failed",
+        reason_code: reasonCode,
+      });
+    }
   }
   store.patchSession({ status: "error", endedReason: userReason });
   finishCall(reasonCode);
@@ -313,12 +605,14 @@ export const startOutgoingCall = async (opts: {
 
   const iceServers = await resolveIceServers();
   pc = createPeerConnection(iceServers);
+  bindMuteChannel(pc.createDataChannel("call-state"));
   localStream.getTracks().forEach((track) => pc!.addTrack(track, localStream!));
 
   let offer: RTCSessionDescriptionInit;
   try {
     offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
+    armConnectTimeout();
   } catch (error) {
     console.error("[call] createOffer failed", error);
     store.patchSession({ status: "error", endedReason: "Не удалось начать звонок" });
@@ -454,6 +748,7 @@ export const acceptIncomingCall = async () => {
     await flushPendingRemoteIce();
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
+    armConnectTimeout();
 
     pendingIncoming = null;
     store.setStatus("connecting");
@@ -538,7 +833,13 @@ export const handleRemoteAnswer = async (payload: CallAnswerResponse) => {
 };
 
 export const handleRemoteIce = async (payload: CallIceCandidateResponse) => {
-  if (payload.message_rtc_uid !== currentMessageRtcUid) return;
+  if (payload.message_rtc_uid !== currentMessageRtcUid) {
+    console.warn(`${LOG} drop remote ICE — message_rtc_uid mismatch`, {
+      got: payload.message_rtc_uid,
+      expected: currentMessageRtcUid,
+    });
+    return;
+  }
   if (currentOwnerUid && payload.uid_user_owner_candidate === currentOwnerUid) return;
 
   let candidateInit: RTCIceCandidateInit;
@@ -548,6 +849,19 @@ export const handleRemoteIce = async (payload: CallIceCandidateResponse) => {
     candidateInit = { candidate: payload.ice_candidate };
   }
 
+  // Парсим тип кандидата из строки candidate:... typ <type>
+  const raw = candidateInit.candidate ?? "";
+  const typMatch = raw.match(/ typ (\S+)/);
+  const protoMatch = raw.match(/^candidate:\S+ \d+ (\S+)/);
+  const candType = typMatch ? typMatch[1] : "unknown";
+  bumpSummary(remoteCandidateSummary, candType);
+  console.log(`${LOG} remote ICE candidate`, {
+    type: candType,
+    protocol: protoMatch ? protoMatch[1] : "?",
+    queued: !pc || !isRemoteDescriptionSet,
+    raw,
+  });
+
   if (!pc || !isRemoteDescriptionSet) {
     pendingRemoteIce.push(candidateInit);
     return;
@@ -556,7 +870,7 @@ export const handleRemoteIce = async (payload: CallIceCandidateResponse) => {
   try {
     await pc.addIceCandidate(candidateInit);
   } catch (error) {
-    console.warn("[call] addIceCandidate failed", error);
+    console.warn(`${LOG} addIceCandidate failed`, error, candidateInit);
   }
 };
 
@@ -616,4 +930,5 @@ export const setLocalMuted = (muted: boolean) => {
     track.enabled = !muted;
   });
   useCallStore.getState().setMuted(muted);
+  sendLocalMutedThroughChannel();
 };
