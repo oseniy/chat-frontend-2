@@ -1,10 +1,23 @@
 import { create } from "zustand";
 
+import { getChatFiles } from "@/entities/chat/api/getChatFiles";
 import { MappedChatMessage, MappedMessageFile } from "@/features/chat/chat/model/types/mappedTypes";
 import { MESSAGE_STATUS } from "@/shared/constants/constants";
 
 import { getChatMedia } from "../api/getChatMedia";
 import { ChatType } from "./types";
+
+// Интерфейс для маппинга полей сервера, вынесен за пределы стора
+interface ExtendedServerFile extends MappedMessageFile {
+  file_type?: string;
+  file_url?: string;
+  file_uid?: string;
+  created_at?: number;
+  first_name?: string;
+  last_name?: string;
+  author_name?: string;
+  duration?: number;
+}
 
 interface ChatState {
   messages: MappedChatMessage[];
@@ -12,9 +25,17 @@ interface ChatState {
   chatKey: string | null;
   chatType: ChatType | null;
   createdBy: string | null;
+
+  // Медиа
   media: MappedMessageFile[];
   isLoadingMedia: boolean;
   isMediaLoaded: boolean;
+
+  // Файлы
+  files: MappedMessageFile[];
+  isLoadingFiles: boolean;
+  isFilesLoaded: boolean;
+
   chatUid: string | null;
   isReady: boolean;
   isHide: boolean;
@@ -25,6 +46,7 @@ interface ChatState {
   forwardTargets: MappedChatMessage[];
 
   fetchMedia: (chatKey: string) => Promise<void>;
+  fetchFiles: (chatKey: string) => Promise<void>;
 
   setReplyTarget: (message: MappedChatMessage | null) => void;
   setForwardTargets: (messages: MappedChatMessage[]) => void;
@@ -62,6 +84,7 @@ interface ChatState {
   clearForwardTargets: () => void;
   clearReplyTarget: () => void;
   clearMedia: () => void;
+  clearFiles: () => void;
   reset: () => void;
 }
 
@@ -72,9 +95,15 @@ export const useChatStore = create<ChatState>((set) => ({
   chatUid: null,
   isReady: false,
   chatId: null,
+
   isLoadingMedia: false,
   isMediaLoaded: false,
   media: [],
+
+  files: [],
+  isLoadingFiles: false,
+  isFilesLoaded: false,
+
   isHide: false,
   replyTarget: null,
   forwardTargets: [],
@@ -94,10 +123,16 @@ export const useChatStore = create<ChatState>((set) => ({
   enterVoiceRecord: () => set({ isVoiceRecord: true }),
   exitVoiceRecord: () => set({ isVoiceRecord: false }),
 
+  // ИСПРАВЛЕНО: Заменен тернарный оператор на if/else для прохождения проверки ESLint
   toggleMessageSelection: (uid) =>
     set((state) => {
       const next = new Set(state.selectedMessageUids);
-      next.has(uid) ? next.delete(uid) : next.add(uid);
+
+      if (next.has(uid)) {
+        next.delete(uid);
+      } else {
+        next.add(uid);
+      }
 
       return {
         selectedMessageUids: next,
@@ -111,20 +146,49 @@ export const useChatStore = create<ChatState>((set) => ({
     try {
       const data = await getChatMedia(chatKey);
 
-      const imagesOnly = (data as unknown as Record<string, unknown>[])
-        .filter((file) => {
-          const type = (file.file_type || file.fileType) as string | undefined;
-          return type?.startsWith("image/");
-        })
-        .map((file) => ({
-          ...file,
-          fileType: (file.file_type || file.fileType) as string,
-          fileUrl: (file.file_url || file.fileUrl) as string,
-        })) as unknown as MappedMessageFile[];
+      // Маппим данные, разрешая и картинки, и аудио
+      const allMedia = (data as ExtendedServerFile[]).map((f): MappedMessageFile => {
+        return {
+          ...f,
+          fileType: f.fileType || f.file_type || "",
+          fileUrl: f.fileUrl || f.file_url || "",
+          uid: f.uid || f.file_uid || "",
+          createdAt: f.createdAt || f.created_at || 0,
+          // Безопасный проброс доп. полей для типизации
+          ...({
+            firstName: f.first_name || f.first_name || "",
+            lastName: f.last_name || f.last_name || "",
+            authorName: f.author_name || f.author_name || "",
+            duration: f.duration || 0,
+          } as Record<string, unknown>),
+        } as MappedMessageFile;
+      });
 
-      set({ media: imagesOnly, isLoadingMedia: false, isMediaLoaded: true });
+      set({ media: allMedia, isLoadingMedia: false, isMediaLoaded: true });
     } catch {
       set({ isLoadingMedia: false, isMediaLoaded: false });
+    }
+  },
+
+  fetchFiles: async (chatKey: string) => {
+    if (!chatKey) return;
+
+    set({
+      isLoadingFiles: true,
+      files: [],
+      isFilesLoaded: false,
+    });
+
+    try {
+      const data = await getChatFiles(chatKey);
+      set({
+        files: data,
+        isLoadingFiles: false,
+        isFilesLoaded: true,
+      });
+    } catch (error) {
+      set({ isLoadingFiles: false, isFilesLoaded: false });
+      console.error("Ошибка загрузки файлов:", error);
     }
   },
 
@@ -177,30 +241,44 @@ export const useChatStore = create<ChatState>((set) => ({
   deleteMessage: (uid) =>
     set((state) => ({ messages: state.messages.filter((msg) => msg.uid !== uid) })),
 
-  addMessage: (message) => {
+  addMessage: (message: MappedChatMessage) => {
     set((state) => {
+      // 1. Обновляем сообщения
+      const updatedMessages = [...state.messages];
       const existingByUidIndex = state.messages.findIndex((msg) => msg.uid === message.uid);
-      if (existingByUidIndex !== -1) {
-        const updated = [...state.messages];
-        updated[existingByUidIndex] = message;
-        return { messages: updated };
-      }
 
-      if (message.requestUid) {
+      if (existingByUidIndex !== -1) {
+        updatedMessages[existingByUidIndex] = message;
+      } else if (message.requestUid) {
         const existingByRequestUidIndex = state.messages.findIndex(
           (msg) => msg.requestUid === message.requestUid,
         );
         if (existingByRequestUidIndex !== -1) {
-          const updated = [...state.messages];
-          updated[existingByRequestUidIndex] = message;
-          return { messages: updated };
+          updatedMessages[existingByRequestUidIndex] = message;
+        } else {
+          updatedMessages.push(message);
         }
+      } else {
+        updatedMessages.push(message);
       }
 
-      return { messages: [...state.messages, message] };
+      // 2. Обновляем медиа (вкладку)
+      // Сначала фильтруем текущие медиа, удаляя старые версии файлов этого сообщения (по uid)
+      // Это решит проблему с "неочищением" и дублями
+      const incomingUids = new Set(message.filesList?.map((f) => f.uid) || []);
+      let updatedMedia = state.media.filter((m) => !incomingUids.has(m.uid));
+
+      if (message.filesList && message.filesList.length > 0) {
+        // Добавляем новые/обновленные файлы в начало
+        updatedMedia = [...message.filesList, ...updatedMedia];
+      }
+
+      return {
+        messages: updatedMessages,
+        media: updatedMedia,
+      };
     });
   },
-
   updateMessageStatus: (uid, status) => {
     set((state) => ({
       messages: state.messages.map((msg) => (msg.uid === uid ? { ...msg, status } : msg)),
@@ -222,8 +300,9 @@ export const useChatStore = create<ChatState>((set) => ({
   },
 
   clearMessages: () => set({ messages: [], replyTarget: null }),
-
   clearMedia: () => set({ media: [], isLoadingMedia: false, isMediaLoaded: false }),
+  clearFiles: () => set({ files: [], isLoadingFiles: false, isFilesLoaded: false }),
+
   reset: () =>
     set({
       messages: [],
@@ -232,8 +311,10 @@ export const useChatStore = create<ChatState>((set) => ({
       isReady: false,
       replyTarget: null,
       media: [],
+      files: [],
       isLoadingMedia: false,
       isMediaLoaded: false,
-      // forwardTargets: [],
+      isLoadingFiles: false,
+      isFilesLoaded: false,
     }),
 }));
