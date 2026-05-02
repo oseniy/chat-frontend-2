@@ -80,7 +80,7 @@ export const ChatHeaderActions = ({
                 onClick={onCallClick}
                 className="desktop:flex ml-3 hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full"
               >
-                <ProfileCallInChatDesktop className="text-primary h-10 w-10" />
+                <ProfileCallInChatDesktop className="text-primary hover:text-primary-secondary smooth h-10 w-10" />
               </button>
             </>
           )}

@@ -70,7 +70,7 @@ export const ActiveCall = () => {
         type="button"
         aria-label="Свернуть звонок"
         onClick={handleMinimize}
-        className="desktop:hidden absolute top-5 left-5 flex h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+        className="desktop:hidden absolute top-5 left-5 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
       >
         <BackArrow className="h-4 w-4" />
       </button>
@@ -79,7 +79,7 @@ export const ActiveCall = () => {
         type="button"
         aria-label={isFullscreen ? "Свернуть в окно" : "Открыть на весь экран"}
         onClick={handleToggleFullscreen}
-        className="desktop:flex absolute top-5 left-5 hidden h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+        className="smooth desktop:flex absolute top-5 left-5 hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full text-white hover:bg-white/15"
       >
         {isFullscreen ? <ContractIcon /> : <ExpandIcon />}
       </button>
@@ -88,7 +88,7 @@ export const ActiveCall = () => {
         type="button"
         aria-label="Свернуть звонок"
         onClick={handleMinimize}
-        className="desktop:flex absolute top-5 right-5 hidden h-9 w-9 items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
+        className="desktop:flex absolute top-5 right-5 hidden h-9 w-9 cursor-pointer items-center justify-center rounded-full text-white transition-colors hover:bg-white/15"
       >
         <CloseIcon />
       </button>

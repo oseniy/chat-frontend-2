@@ -2,6 +2,7 @@ import { getCallTitle } from "@/entities/chat/lib/getCallTitle";
 import { cn } from "@/shared/shadcn/lib/utils";
 import CallIcon from "@/shared/ui/icons/chat/call.svg";
 
+import { useChatCall } from "../model/chatCallContext";
 import { CallBlock } from "../model/messageBlock/types";
 import { SendingStatus } from "../model/types/serverTypes";
 import { MessageTimeAndStatus } from "./messageTimeAndStatus";
@@ -29,17 +30,19 @@ export const CallMessage = ({ block, isMine, time, status }: CallMessageProps) =
   const hasDuration = block.status === "completed" && typeof block.duration === "number";
   const title = getCallTitle(block.status, isMine);
   const iconColor = getIconColor(block.status, isMine);
+  const onCallClick = useChatCall();
 
   return (
     <div className="flex items-center gap-3 px-3 py-2.5">
-      <div
+      <button
+        onClick={onCallClick ?? undefined}
         className={cn(
-          "desktop:bg-white bg-primary-accent-light flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
+          "smooth desktop:bg-white bg-primary-accent-light flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-full hover:scale-105",
           isMine && "bg-white",
         )}
       >
         <CallIcon className={`h-6 w-6 ${iconColor}`} />
-      </div>
+      </button>
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="subtext truncate text-black">{title}</span>
         <div className="flex items-center justify-between gap-3">

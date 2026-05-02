@@ -32,14 +32,14 @@ export const IncomingCall = () => {
           <button
             type="button"
             onClick={onReject}
-            className="bg-call-reject flex h-10 flex-1 items-center justify-center rounded-2xl px-4 text-sm text-white transition-opacity hover:opacity-90"
+            className="smooth bg-call-reject flex h-10 flex-1 cursor-pointer items-center justify-center rounded-2xl px-4 text-sm text-white hover:opacity-90"
           >
             Отклонить
           </button>
           <button
             type="button"
             onClick={onAccept}
-            className="bg-call-accept flex h-10 flex-1 items-center justify-center rounded-2xl px-4 text-sm text-white transition-opacity hover:opacity-90"
+            className="bg-call-accept smooth flex h-10 flex-1 cursor-pointer items-center justify-center rounded-2xl px-4 text-sm text-white hover:opacity-90"
           >
             Ответить
           </button>
@@ -62,14 +62,14 @@ export const IncomingCall = () => {
           <button
             type="button"
             onClick={onReject}
-            className="bg-call-reject flex h-11 flex-1 items-center justify-center rounded-2xl px-4 py-1.5 text-base text-white transition-opacity hover:opacity-90"
+            className="bg-call-reject smooth flex h-11 flex-1 cursor-pointer items-center justify-center rounded-2xl px-4 py-1.5 text-base text-white hover:opacity-90"
           >
             Отклонить
           </button>
           <button
             type="button"
             onClick={onAccept}
-            className="bg-call-accept flex h-11 flex-1 items-center justify-center rounded-2xl px-4 py-1.5 text-base text-white transition-opacity hover:opacity-90"
+            className="bg-call-accept smooth flex h-11 flex-1 cursor-pointer items-center justify-center rounded-2xl px-4 py-1.5 text-base text-white hover:opacity-90"
           >
             Ответить
           </button>

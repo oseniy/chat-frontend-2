@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import { MappedChatDetails } from "@/entities/chat/lib/mapChat";
 import { useChatInfoStore } from "@/entities/chat/model/useChatInfoStore";
+import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { UserPreview } from "@/entities/user/model/types";
 import { useUserStore } from "@/entities/user/model/userStore";
 import { normalizeChatInfo } from "@/features/chat/chat/lib/normalizeChatInfo";
@@ -48,6 +49,10 @@ export const ChatWidget: React.FC<ChatWidgetProps> = ({
 
   const chatName = chatInfo.title || chatInfo.firstName || "Unknown";
   const chatAvatar = chatInfo.avatar || chatInfo.avatarUrl || "";
+
+  useEffect(() => {
+    useChatStore.setState({ peerName: chatName, peerPhoto: chatAvatar || null });
+  }, [chatName, chatAvatar]);
 
   return (
     <div className={cn("desktop:h-full flex max-h-dvh w-full flex-col", className)}>

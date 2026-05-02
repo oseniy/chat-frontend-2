@@ -10,10 +10,10 @@ export const MuteButton: React.FC<MuteButtonProps> = ({ isMuted, onClick }) => {
       aria-label={isMuted ? "Включить микрофон" : "Выключить микрофон"}
       aria-pressed={isMuted}
       onClick={onClick}
-      className="flex w-24 flex-col items-center gap-1"
+      className="flex w-24 cursor-pointer flex-col items-center gap-1"
     >
       <span
-        className="bg-accent-light text-primary flex h-9 w-9 items-center justify-center rounded-full"
+        className="smooth hover:bg-accent-light/80 bg-accent-light text-primary flex h-9 w-9 items-center justify-center rounded-full"
         // style={{ background: "#E5E4F7", color: "#7769E1" }}
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>

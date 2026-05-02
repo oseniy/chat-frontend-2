@@ -20,6 +20,8 @@ interface ChatState {
   isHide: boolean;
   chatKeyUser: string | null;
   chatId: number | null;
+  peerName: string | null;
+  peerPhoto: string | null;
 
   replyTarget: MappedChatMessage | null;
   forwardTargets: MappedChatMessage[];
@@ -76,6 +78,8 @@ export const useChatStore = create<ChatState>((set) => ({
   isMediaLoaded: false,
   media: [],
   isHide: false,
+  peerName: null,
+  peerPhoto: null,
   replyTarget: null,
   forwardTargets: [],
   chatType: null,
@@ -234,6 +238,8 @@ export const useChatStore = create<ChatState>((set) => ({
       media: [],
       isLoadingMedia: false,
       isMediaLoaded: false,
+      peerName: null,
+      peerPhoto: null,
       // forwardTargets: [],
     }),
 }));
