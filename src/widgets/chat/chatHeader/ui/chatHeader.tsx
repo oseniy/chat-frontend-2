@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { useOutgoingCall } from "@/features/call";
 import { SearchMessageResponse } from "@/features/chat/chat/lib/searchMessagePosition";
 import { searchMessages } from "@/features/chat/chat/lib/searchMessages";
 import { useMessageNavigation } from "@/features/chat/chat/model/store/useChatNavigationStore";
@@ -42,6 +43,7 @@ export const ChatHeader = ({ chat, backHref, profileHref, join, chatKey }: Props
     token,
     chatType: chat.chatType,
   });
+  const { startAudioCall } = useOutgoingCall();
 
   const [results, setResults] = useState<SearchMessageResponse[]>([]);
   const [resultsCount, setResultsCount] = useState(0);
@@ -125,7 +127,14 @@ export const ChatHeader = ({ chat, backHref, profileHref, join, chatKey }: Props
     resetNavigationStore();
   };
 
-  const onCallClick = () => {};
+  const onCallClick = () => {
+    if (chat.chatType !== "chat") return;
+    startAudioCall({
+      uid: chat.chatUid,
+      name: chat.name,
+      avatarUrl: chat.photo,
+    });
+  };
 
   return (
     <div className="flex flex-col">

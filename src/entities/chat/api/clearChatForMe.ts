@@ -10,7 +10,7 @@ export interface ClearChatSuccess {
   index: number | null;
 }
 
-export const clearChat = async (data: ClearChatData): Promise<Result<ClearChatSuccess>> => {
+export const clearChatForMe = async (data: ClearChatData): Promise<Result<ClearChatSuccess>> => {
   try {
     const { data: response } = await getApiClient.post<ClearChatSuccess>(
       `/api/v1/chat/list/clear/${data.index}/`,

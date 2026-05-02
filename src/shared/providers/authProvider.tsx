@@ -28,6 +28,9 @@ export const AuthProvider = ({ children, initialToken }: AuthProviderProps) => {
         await logout({ broadcast: false });
         router.push("/auth");
       }
+      if (msg.type === "login") {
+        router.refresh();
+      }
     });
   }, [router]);
 

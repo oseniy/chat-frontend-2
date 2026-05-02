@@ -1,9 +1,10 @@
+import { AxiosError } from "axios"; // Импортируем для правильной типизации ошибок
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { saveFlashCallAuthAction } from "@/features/auth/phoneForm/lib/actions/saveFlashCallAuth";
-import { saveIsFilledToCookie } from "@/shared/api/actions/saveIsFilledToCookie";
-import { saveTokenToCookie } from "@/shared/api/actions/saveTokenToCookie";
-import { API_CONFIG } from "@/shared/api/base";
+import { broadcastLogin } from "@/shared/api/authChannel";
+import { getApiClient } from "@/shared/api/getApiClient";
 import { useAuthStore } from "@/shared/api/store";
 
 export const useFlashCall = () => {
@@ -11,8 +12,9 @@ export const useFlashCall = () => {
   const [error, setError] = useState<string | null>(null);
   const [callNumber, setCallNumber] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const router = useRouter();
   const { setAccessToken } = useAuthStore();
-  const BASE_URL = API_CONFIG.baseURL;
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
@@ -23,57 +25,73 @@ export const useFlashCall = () => {
 
   const start = useCallback(
     async (phone: string) => {
-      if (!BASE_URL) return setError("API URL не настроен");
       setStage("calling");
       setError(null);
       setCallNumber(null);
+
       try {
-        const res = await fetch(`${BASE_URL}/api/v1/auth/providers/plusofon/flash-call/start/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone_number: phone }),
+        // 1. START
+        const startRes = await getApiClient.post<{
+          session_uid: string;
+          session_secret: string;
+          poll_interval_seconds: number;
+          call_number: string;
+        }>("/api/v1/auth/providers/plusofon/flash-call/start/", {
+          phone_number: phone,
         });
-        if (!res.ok) throw new Error("Ошибка запуска звонка");
-        const { session_uid, session_secret, poll_interval_seconds, call_number } =
-          await res.json();
+
+        const { session_uid, session_secret, poll_interval_seconds, call_number } = startRes.data;
         setCallNumber(call_number);
 
+        // 2. STATUS POLLING
         pollingRef.current = setInterval(
           async () => {
             try {
-              const statusRes = await fetch(
-                `${BASE_URL}/api/v1/auth/providers/plusofon/flash-call/status/${session_uid}/`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ session_secret }),
-                },
-              );
-              const data = await statusRes.json();
+              const statusRes = await getApiClient.post<{
+                status: string;
+              }>(`/api/v1/auth/providers/plusofon/flash-call/status/${session_uid}/`, {
+                session_secret,
+              });
+
+              const data = statusRes.data;
+
               if (data.status === "verified") {
                 stopPolling();
-                const claimRes = await fetch(
-                  `${BASE_URL}/api/v1/auth/providers/plusofon/flash-call/claim/${session_uid}/`,
-                  {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ session_secret }),
-                  },
-                );
-                if (claimRes.ok) {
-                  const tokens = await claimRes.json();
-                  await saveFlashCallAuthAction(tokens.refresh);
-                  await saveTokenToCookie(tokens.access);
-                  await saveIsFilledToCookie(tokens.is_filled ?? false);
-                  setAccessToken(tokens.access);
-                  setStage("success");
-                  setTimeout(() => {
-                    window.location.href = "/chats";
-                  }, 400);
-                }
+
+                // 3. CLAIM TOKENS
+                const claimRes = await getApiClient.post<{
+                  access: string;
+                  refresh: string;
+                  is_filled: boolean;
+                }>(`/api/v1/auth/providers/plusofon/flash-call/claim/${session_uid}/`, {
+                  session_secret,
+                });
+
+                const tokens = claimRes.data;
+
+                await saveFlashCallAuthAction({
+                  refresh: tokens.refresh,
+                  access: tokens.access,
+                  isFilled: tokens.is_filled ?? false,
+                });
+
+                setAccessToken(tokens.access);
+                setStage("success");
+                broadcastLogin();
+
+                router.refresh();
+                setTimeout(() => {
+                  router.replace("/chats");
+                }, 800);
               }
-            } catch (e) {
-              console.error(e);
+
+              if (data.status === "expired" || data.status === "failed") {
+                stopPolling();
+                setStage("error");
+                setError("Время ожидания вызова истекло.");
+              }
+            } catch (e: unknown) {
+              console.error("Polling error:", e instanceof Error ? e.message : e);
             }
           },
           (poll_interval_seconds || 2) * 1000,
@@ -81,12 +99,21 @@ export const useFlashCall = () => {
       } catch (err: unknown) {
         stopPolling();
         setStage("error");
-        setError(err instanceof Error ? err.message : "Ошибка");
+
+        if (err instanceof AxiosError) {
+          const serverMessage = err.response?.data?.message || err.response?.data?.detail;
+          setError(serverMessage || err.message || "Ошибка авторизации");
+        } else {
+          setError(err instanceof Error ? err.message : "Неизвестная ошибка");
+        }
       }
     },
-    [BASE_URL, setAccessToken, stopPolling],
+    [setAccessToken, stopPolling, router],
   );
 
-  useEffect(() => () => stopPolling(), [stopPolling]);
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
+
   return { start, stage, error, callNumber };
 };

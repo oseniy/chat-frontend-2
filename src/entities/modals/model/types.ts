@@ -16,7 +16,8 @@ export type ModalPayloads = {
   clearChat: {
     chatName: string;
     modalVariant: "channel" | "group" | "chat";
-    onConfirm: () => void;
+    onConfirm: (forAll: boolean) => void;
+    isOwner?: boolean;
   };
   sendImage: { chatKey: string };
   sendFile: { chatKey: string };

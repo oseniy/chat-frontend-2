@@ -4,6 +4,7 @@ import { MediaGrid } from "@/shared/ui/mediaGrid/mediaGrid";
 import { AudioMessage } from "../../../recordVoiceMessage/ui/audioMessage";
 import { MessageBlock } from "../model/messageBlock/types";
 import { SendingStatus } from "../model/types/serverTypes";
+import { CallMessage } from "./callMessage";
 import { FileMessage } from "./fileMessage";
 import { MessageReply } from "./messageReply";
 import { MessageText } from "./messageText";
@@ -50,6 +51,9 @@ export const MessageBlockRenderer = ({
     case "audio": {
       return <AudioMessage file={block} isMine={isMine} time={time} status={status} />;
     }
+
+    case "call":
+      return <CallMessage block={block} isMine={isMine} time={time} status={status} />;
 
     case "inviteLink":
       return <InviteLinkPreview chatKey={block.chatKey} token={block.token} />;

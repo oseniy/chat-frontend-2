@@ -4,7 +4,11 @@ import { ru } from "date-fns/locale";
 import { MappedChatMessage } from "../model/types/mappedTypes";
 
 export const groupMessagesByDate = (messages: MappedChatMessage[]) => {
-  const sortedMessages = [...messages].sort((a, b) => a.createdAt - b.createdAt);
+  const sortedMessages = [...messages].sort((a, b) => {
+    const byTime = a.createdAt - b.createdAt;
+    if (byTime !== 0) return byTime;
+    return (a.id || 0) - (b.id || 0);
+  });
 
   const groups = new Map<string, MappedChatMessage[]>();
 

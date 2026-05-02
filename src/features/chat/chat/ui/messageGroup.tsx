@@ -2,7 +2,7 @@ import React, { memo } from "react";
 
 import { getMessageMarginTop } from "../lib/getMessageMarginTop";
 import { MappedChatMessage } from "../model/types/mappedTypes";
-import { DateBadge } from "./dateBage";
+import { ChatBadge } from "./chatBadge";
 import { MessageBubble } from "./messageBubble";
 
 type MessageGroupProps = {
@@ -28,7 +28,7 @@ const messageGroupComponent = memo(
       firstMsg?.chatType === "public-channel" || firstMsg?.chatType === "private-channel";
     return (
       <div className="flex w-full flex-col">
-        <DateBadge label={label} className="desktop:mb-5 mb-3" />
+        <ChatBadge label={label} className="desktop:mb-5 mb-3" />
         {messages.map((msg, idx) => {
           const prev = messages[idx - 1];
           const next = messages[idx + 1];

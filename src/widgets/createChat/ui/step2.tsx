@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useShallow } from "zustand/shallow";
 
 import { useContactsSync } from "@/entities/contact/lib/useContactsSync";
 import { useContactStore } from "@/entities/contact/model/store";
@@ -11,6 +12,7 @@ import { NoSearchResults } from "@/shared/ui/noSearchResults";
 import { Searchbar } from "@/shared/ui/searchbar";
 
 import { useStep2Logic } from "../lib/useStep2Logic";
+import { useStep2SelectionStore } from "../model/step2SelectionStore";
 
 type Step2WidgetProps = {
   className?: string;
@@ -20,6 +22,10 @@ export const Step2Widget: React.FC<Step2WidgetProps> = () => {
   const [search, setSearch] = useState("");
   const { fetchNextPage, hasNextPage, isFetchingNextPage } = useContactsSync();
   const { contacts, isInitialized } = useContactStore();
+  const { selected, toggle } = useStep2SelectionStore(
+    useShallow((s) => ({ selected: s.selected, toggle: s.toggle })),
+  );
+  const selectedUids = useMemo(() => new Set(selected.map((c) => c.uid)), [selected]);
   const logic = useStep2Logic({
     contacts,
     isInitialized,
@@ -39,8 +45,16 @@ export const Step2Widget: React.FC<Step2WidgetProps> = () => {
         {logic.showLocalContacts && (
           <div className="flex flex-col gap-2">
             <ListSeparator text="Мои контакты" />
-            {logic.filteredLocalContacts.map((c, index) => {
-              return <ContactCardFeature contact={c} key={index} />;
+            {logic.filteredLocalContacts.map((c) => {
+              return (
+                <ContactCardFeature
+                  contact={c}
+                  key={c.systemUid}
+                  isSelecting
+                  isChecked={selectedUids.has(c.uid)}
+                  onToggle={toggle}
+                />
+              );
             })}
           </div>
         )}

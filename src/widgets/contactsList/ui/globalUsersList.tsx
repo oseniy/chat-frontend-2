@@ -1,5 +1,5 @@
 import { Contact } from "@/entities/contact/model/types";
-import { ContactCardFeature } from "@/features/contacts/ui/ContactCardFeature";
+import { ContactCardDeleteFeature } from "@/features/contacts/ui/ContactCardDeleteFeature";
 import { cn } from "@/shared/shadcn/lib/utils";
 import { ListSeparator } from "@/shared/ui/listSeparator";
 
@@ -12,8 +12,8 @@ export const GlobalUsersList: React.FC<GlobalUsersListProps> = ({ className, glo
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <ListSeparator text="Пользователи А-чата" />
-      {globalUsers.map((c, index) => {
-        return <ContactCardFeature contact={c} key={index} />;
+      {globalUsers.map((c) => {
+        return <ContactCardDeleteFeature contact={c} key={c.systemUid} />;
       })}
     </div>
   );

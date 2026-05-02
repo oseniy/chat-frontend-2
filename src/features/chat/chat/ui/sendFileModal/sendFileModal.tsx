@@ -1,7 +1,11 @@
+"use client";
+
 import AttachBtn from "@icons/chat/attachBtn.svg";
 import Close from "@icons/close.svg";
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
+import React from "react";
 
+import { useChatStore } from "@/entities/chat/model/useChatStore"; // Импорт основного стора
 import { openFilePicker } from "@/features/chat/chat/lib/openFilePicker";
 import { useSendFilesStore } from "@/features/chat/chat/model/store/useChatSendFilesStore";
 import { MessageForm } from "@/features/chat/sendMessage/ui/messageForm";
@@ -14,6 +18,7 @@ import { Button } from "@/shared/shadcn/ui/button";
 import { FileList } from "@/shared/ui/fileList/fileList";
 
 import { useSendMessage } from "../../hooks";
+
 export type SendFileModalProps = {
   className?: string;
   isOpen: boolean;
@@ -26,6 +31,10 @@ export const SendFileModal: React.FC<SendFileModalProps> = ({ className, isOpen,
   const files = useSendFilesStore((s) => s.attachments);
   const { clear, addFiles, error } = useSendFilesStore();
   const { isKeyboardOpen } = useKeyboardOffset();
+
+  // Получаем функции обновления и текущий ключ чата из стора
+  const fetchFiles = useChatStore((s) => s.fetchFiles);
+  const chatKeyFromStore = useChatStore((s) => s.chatKey);
 
   const handleClose = () => {
     clear();
@@ -41,7 +50,14 @@ export const SendFileModal: React.FC<SendFileModalProps> = ({ className, isOpen,
 
   const handleSend = async (text: string) => {
     handleClose();
+
+    // 1. Отправляем файлы на сервер
     await sendMessage(text, [], files);
+
+    // 2. Сразу запрашиваем обновленный список файлов для вкладок
+    if (chatKeyFromStore) {
+      await fetchFiles(chatKeyFromStore);
+    }
   };
 
   if (!files.length && !error) return null;

@@ -4,6 +4,7 @@ import { cn } from "@/shared/shadcn/lib/utils";
 import { InfoItem } from "@/shared/ui/infoItems/infoItem";
 import { useInviteLink } from "@/widgets/anothersProfile/lib/useInviteLink";
 
+import { getChatTypeLight } from "../lib/getChatTypeLight";
 import { MappedChatDetails } from "../lib/mapChat";
 
 type ChatInfoListProps = {
@@ -16,7 +17,9 @@ export const ChatInfoList = ({ className, initialData, isOwner }: ChatInfoListPr
   const description = initialData?.description;
 
   const { data, isLoading, isError } = useInviteLink(isOwner ? initialData?.chatKey : undefined);
-
+  const chatTypeLight = getChatTypeLight(initialData?.chatKey ?? "");
+  const title =
+    chatTypeLight == "channel" ? "Ссылка на приглашение в канал" : "Ссылка на приглашение в группу";
   const fullInviteLink = (() => {
     if (!data?.invite_link) return undefined;
     const tokenMatch = data.invite_link.match(/[?&]token=([^\s&]+)/);
@@ -44,7 +47,7 @@ export const ChatInfoList = ({ className, initialData, isOwner }: ChatInfoListPr
         <div className={cn("flex w-full flex-col rounded-lg bg-white", className)}>
           <InfoItem
             copy
-            title="Ссылка на приглашение в группу"
+            title={title}
             text={inviteLink}
             className={cn(hasInviteLink ? "text-primary" : "text-black")}
           />

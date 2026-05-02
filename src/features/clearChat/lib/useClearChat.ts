@@ -3,7 +3,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
-import { clearChat } from "@/entities/chat/api/clearChat";
+import { clearChatForMe } from "@/entities/chat/api/clearChatForMe";
+import { clearChatForAll } from "@/entities/chat/api/ws/clearChatForAll";
 import { ChatType } from "@/entities/chat/model/types";
 import { useChatStore } from "@/entities/chat/model/useChatStore";
 import { useModalStore } from "@/entities/modals/model/useGlobalModalStore";
@@ -12,19 +13,23 @@ import { useToast } from "@/shared/toast/ui/toastProvider";
 
 type UseClearChatParams = {
   chatId: number | null;
+  chatKey: string | null;
   chatName: string;
   chatType: ChatType;
 };
 
-export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams) => {
+export const useClearChat = ({ chatId, chatKey, chatName, chatType }: UseClearChatParams) => {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const closeModal = useModalStore((s) => s.closeModal);
+
+  // Функции очистки стейта
   const clearMessages = useChatStore((s) => s.clearMessages);
+  const clearMedia = useChatStore((s) => s.clearMedia);
+  const clearFiles = useChatStore((s) => s.clearFiles);
 
   const [isLoading, setIsLoading] = useState(false);
 
-  // Определение варианта модалки
   const clearChatModalVariant =
     chatType === "public-channel" || chatType === "private-channel"
       ? ("channel" as const)
@@ -32,50 +37,76 @@ export const useClearChat = ({ chatId, chatName, chatType }: UseClearChatParams)
         ? ("group" as const)
         : ("chat" as const);
 
-  // Определение текста Toast
   const toastMessage =
     chatType === "public-channel" || chatType === "private-channel"
       ? "История канала удалена"
       : "История чата удалена";
 
-  const confirmClear = useCallback(async () => {
-    setIsLoading(true);
+  const confirmClear = useCallback(
+    async (forAll: boolean) => {
+      // ИСПРАВЛЕНО: Безопасное приведение типа через unknown для поиска ID
+      const chatState = useChatStore.getState() as unknown as Record<string, unknown>;
+      const activeId = (chatState.activeChatId || chatState.chatId || chatState.id) as
+        | number
+        | undefined;
+      const targetId = (chatId || activeId) as number | null;
 
-    // Получаем chatKey из store для optimistic update
-    const { chatsByKey } = useChatListStore.getState();
-    const chatKey = Object.keys(chatsByKey).find((key) => chatsByKey[key].id === chatId);
-
-    try {
-      // 1. API запрос на очистку
-      await clearChat({ index: chatId });
-
-      // 2. Optimistic update - мгновенное обновление UI
-      if (chatKey) {
-        useChatListStore.getState().patchChat(chatKey, {
-          lastMessage: null,
-          unreadMessages: 0,
-          unreadFiles: 0,
-        });
+      if (!targetId) {
+        console.error("Не удалось найти ID чата для очистки");
+        return;
       }
+      setIsLoading(true);
 
-      // 3. Очищаем сообщения в открытом окне чата
-      clearMessages();
+      const { chatsByKey } = useChatListStore.getState();
+      const resolvedChatKey =
+        chatKey ?? Object.keys(chatsByKey).find((key) => chatsByKey[key].id === chatId);
 
-      // 4. Invalidate для фоновой перезагрузки (гарантия актуальности)
-      queryClient.invalidateQueries({ queryKey: ["chats"] });
+      try {
+        if (forAll && resolvedChatKey) {
+          await clearChatForAll(resolvedChatKey);
+        } else {
+          await clearChatForMe({ index: targetId });
+        }
 
-      // 5. Закрываем модалку и показываем успех
-      closeModal();
-      showToast(toastMessage, {
-        mobile: "/icons/toast/checkMobile.svg",
-        desktop: "/icons/toast/checkDesktop.svg",
-      });
-    } catch (error) {
-      console.error("Ошибка при очистке чата:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [closeModal, showToast, toastMessage, clearMessages, chatId, queryClient]);
+        if (resolvedChatKey) {
+          useChatListStore.getState().patchChat(resolvedChatKey, {
+            lastMessage: null,
+            unreadMessages: 0,
+            unreadFiles: 0,
+          });
+        }
+
+        // Очищаем все вкладки визуально
+        clearMessages();
+        clearMedia();
+        clearFiles();
+
+        queryClient.invalidateQueries({ queryKey: ["chats"] });
+        queryClient.invalidateQueries({ queryKey: ["messages", targetId] });
+
+        closeModal();
+        showToast(toastMessage, {
+          mobile: "/icons/toast/checkMobile.svg",
+          desktop: "/icons/toast/checkDesktop.svg",
+        });
+      } catch (error) {
+        console.error("Ошибка при очистке чата:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [
+      closeModal,
+      showToast,
+      toastMessage,
+      clearMessages,
+      clearMedia,
+      clearFiles,
+      chatId,
+      chatKey,
+      queryClient,
+    ],
+  );
 
   return {
     isLoading,

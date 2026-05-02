@@ -34,7 +34,6 @@ const nicknameSchema = z
     message: "Никнейм не может начинаться с пробела",
   })
   .min(1, "Заполните поле")
-  .min(5, "Не менее 5 символов")
   .max(32, "Не более 32 символов")
   .regex(/^[A-Za-z0-9_-]+$/, {
     message: "Допустимы: латиница, цифры, дефис (-) и подчёркивание (_)",
@@ -47,7 +46,8 @@ const nicknameSchema = z
   })
   .refine((val) => !/--|__/.test(val), {
     message: "Нельзя использовать -- или __ подряд",
-  });
+  })
+  .min(5, "Не менее 5 символов");
 
 const userFormSchema = z.object({
   firstName: firstNameSchema,

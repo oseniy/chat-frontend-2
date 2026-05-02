@@ -2,7 +2,7 @@ import { memo, useCallback } from "react";
 
 import { Avatar } from "@/entities/chat/ui/avatar";
 import { cn } from "@/shared/shadcn/lib/utils";
-import { Checkbox } from "@/shared/ui/checkBox";
+import { Checkbox } from "@/shared/ui/checkbox";
 
 import { useChatStore } from "../../../../entities/chat/model/useChatStore";
 import { useMessageContextMenu } from "../lib/useMessageContextMenu";
@@ -32,7 +32,7 @@ const messageBubbleComponent = memo(
     isChannel,
     ...dataAttributes
   }: MessageBubbleProps) => {
-    const isMine = chatMessage.fromUser.uid === currentUserId;
+    const isMine = isChannel ? false : chatMessage.fromUser.uid === currentUserId;
     const { isSelectionMode, selectedMessageUids, toggleMessageSelection } = useChatStore();
     const isSelected = selectedMessageUids.has(chatMessage.uid);
 

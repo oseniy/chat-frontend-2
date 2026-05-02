@@ -44,6 +44,7 @@ export const useChatProfileContextMenu = ({
   });
   const { clearChatModalVariant, confirmClear } = useClearChat({
     chatId,
+    chatKey,
     chatName,
     chatType: fullChatType,
   });
@@ -62,6 +63,7 @@ export const useChatProfileContextMenu = ({
             chatName,
             modalVariant: clearChatModalVariant,
             onConfirm: confirmClear,
+            isOwner: isOwner,
           });
         },
       },

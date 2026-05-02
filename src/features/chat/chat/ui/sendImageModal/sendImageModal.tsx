@@ -1,7 +1,11 @@
+"use client";
+
 import AttachBtn from "@icons/chat/attachBtn.svg";
 import Close from "@icons/close.svg";
 import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
+import React from "react";
 
+import { useChatStore } from "@/entities/chat/model/useChatStore"; // Импортируем основной стор
 import { useSendMessage } from "@/features/chat/chat/hooks";
 import { useSendImageStore } from "@/features/chat/chat/model/store/useChatSendImagesStore";
 import { MessageForm } from "@/features/chat/sendMessage/ui/messageForm";
@@ -27,6 +31,12 @@ export const SendImageModal: React.FC<SendImageModalProps> = ({ className, isOpe
   const { clear, addImages } = useSendImageStore();
   const { isKeyboardOpen } = useKeyboardOffset();
   const sendMessage = useSendMessage();
+
+  // Достаем методы обновления и ключ чата
+  const fetchMedia = useChatStore((s) => s.fetchMedia);
+  const fetchFiles = useChatStore((s) => s.fetchFiles);
+  const chatKeyFromStore = useChatStore((s) => s.chatKey);
+
   const imagesToUpload: MediaItem[] = images.map((img) => {
     const obj = {
       id: img.id,
@@ -47,9 +57,15 @@ export const SendImageModal: React.FC<SendImageModalProps> = ({ className, isOpe
   };
 
   const handleSend = async (text: string) => {
-    // if (images.length === 0) return;
     handleClose();
+    // 1. Отправляем изображения
     await sendMessage(text || "", images, []);
+
+    // 2. Принудительно обновляем вкладки Медиа и Файлы
+    if (chatKeyFromStore) {
+      await fetchMedia(chatKeyFromStore);
+      await fetchFiles(chatKeyFromStore);
+    }
   };
 
   if (!images.length) return null;

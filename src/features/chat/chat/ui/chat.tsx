@@ -10,6 +10,7 @@ import { ChatFooter } from "@/widgets/chat/chatFooter/ui/chatFooter";
 
 import { useSendMessage } from "../hooks";
 import { useChatMessagesInfinite } from "../hooks/useChatMessagesInfinite";
+import { ChatCallProvider } from "../model/chatCallContext";
 import { mapChatMessages } from "../model/mapper";
 import { useMessageNavigation } from "../model/store/useChatNavigationStore";
 import { ChatType } from "../model/types/serverTypes";
@@ -168,19 +169,21 @@ export const Chat = ({
   }
 
   return (
-    <div className={cn("flex h-full flex-col", className)}>
-      <MessageList
-        currentUserId={currentUserId || ""}
-        className="flex-1"
-        fetchNextPage={fetchNextPage}
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        loadedPages={data?.pages.length}
-        isOwner={isOwner}
-      />
-      {((chatType != "public-channel" && chatType != "private-channel") || isOwner) && (
-        <ChatFooter onSendMessage={handleSendMessage} join={join} />
-      )}
-    </div>
+    <ChatCallProvider>
+      <div className={cn("flex h-full flex-col", className)}>
+        <MessageList
+          currentUserId={currentUserId || ""}
+          className="flex-1"
+          fetchNextPage={fetchNextPage}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          loadedPages={data?.pages.length}
+          isOwner={isOwner}
+        />
+        {((chatType != "public-channel" && chatType != "private-channel") || isOwner) && (
+          <ChatFooter onSendMessage={handleSendMessage} join={join} />
+        )}
+      </div>
+    </ChatCallProvider>
   );
 };

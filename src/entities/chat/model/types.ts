@@ -16,6 +16,14 @@ export type ChatType =
 
 export type ChatTypeLight = "chat" | "channel" | "group";
 
+export interface LastMessageCallInfo {
+  uid: string;
+  duration: number;
+  status: string;
+  created_at: number;
+  updated_at: number;
+}
+
 export interface LastMessage {
   id: number;
   uid: string;
@@ -30,6 +38,7 @@ export interface LastMessage {
   new?: boolean;
   created_at: number;
   updated_at: number;
+  message_rtc?: LastMessageCallInfo | null;
 }
 
 export type ChatObject = {
@@ -45,6 +54,10 @@ export type ChatObject = {
     url: string;
   } | null;
   added_users: Array<{
+    uid: string;
+    full_name: string;
+  }>;
+  remove_users: Array<{
     uid: string;
     full_name: string;
   }>;
@@ -113,6 +126,8 @@ export type LastMessagePreview = {
 export type GetLastMessagePreviewParams = {
   content?: string;
   files?: FilesSummary | null;
+  call?: LastMessageCallInfo | null;
+  isMine?: boolean;
 };
 
 // --- Типы участников чата (эндпоинт /participants/) ---
