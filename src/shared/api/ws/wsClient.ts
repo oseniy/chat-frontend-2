@@ -1,6 +1,7 @@
 // wsClient.ts
 import { v4 as uuidv4 } from "uuid";
 
+import { useAuthStore } from "../store"; // Укажите правильный относительный путь к Zustand-стору
 import { QueuedRequest, WSBaseResponse, WSHandler, WSStatus } from "./model/types";
 import { useWSRequestStore } from "./model/wsRequest.store";
 import { logIncomingMessage, logOutgoingMessage, logQueuedMessage } from "./wsLogger";
@@ -13,6 +14,8 @@ let requestQueue: QueuedRequest[] = [];
 let reconnectAttempts = 0;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let manualClose = false;
+
+let activityPingInterval: ReturnType<typeof setInterval> | null = null;
 
 const MAX_RECONNECT_DELAY = 30_000;
 
@@ -47,17 +50,46 @@ const drainQueue = () => {
 };
 
 const attachHandlers = (ws: WebSocket) => {
+  // Изолированная функция управления таймером пинга (Задача #1)
+  const startActivityPingTimer = () => {
+    // Перед запуском всегда очищаем предыдущий интервал, чтобы они не дублировались в памяти
+    if (activityPingInterval) {
+      clearInterval(activityPingInterval);
+    }
+
+    activityPingInterval = setInterval(() => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ action: "ping" }));
+    }, 20_000); // Строго 20 секунд (Пункт 5 требований бэкенда)
+  };
+
   ws.onopen = () => {
     console.log("WS connected ✅");
     status = "connected";
     reconnectAttempts = 0;
     clearReconnectTimeout();
+
+    // МГНОВЕННЫЙ ПИНГ: Отправляем сразу при открытии, чтобы Celery/Redis
+    // не закрыли сессию по таймауту неактивности в первые секунды (Пункт 6 требований бэка)
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: "ping" }));
+      console.log("Initial ping sent immediately ⚡");
+    }
+
+    // Запускаем регулярный Keep-Alive таймер на каждые 20 секунд
+    startActivityPingTimer();
+
     drainQueue();
   };
 
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data) as WSBaseResponse<unknown>;
+
+      // Пункт 6 требований: Любой пакет от сервера (включая pong) продлевает keep-alive.
+      // Перезапускаем 20-секундный таймер ожидания, чтобы не слать лишние пинги при живом общении.
+      startActivityPingTimer();
+
       logIncomingMessage(data);
       handlers.forEach((handler) => handler(data));
     } catch {
@@ -69,9 +101,29 @@ const attachHandlers = (ws: WebSocket) => {
     console.log("WS closed ❌", event.code, event.reason);
     socket = null;
 
+    // Обязательно очищаем таймер, чтобы предотвратить утечки памяти в браузере
+    if (activityPingInterval) {
+      clearInterval(activityPingInterval);
+      activityPingInterval = null;
+    }
+
     if (manualClose) {
       status = "closed";
       return;
+    }
+
+    // Пункт 6 требований: Close code 4004 = деактивация или удаление аккаунта.
+    // Принудительно останавливаем реконнект и стираем токен в Zustand.
+    if (event.code === 4004) {
+      status = "closed";
+      console.warn("Account deactivated. Resetting token...");
+      useAuthStore.getState().clearAccessToken();
+      return;
+    }
+
+    // Пункт 6 требований: Close code 4000 = закрытие stale соединения по таймауту неактивности
+    if (event.code === 4000) {
+      console.log("Stale connection closed by server. Initiating reconnect...");
     }
 
     if (!navigator.onLine) {
@@ -85,8 +137,7 @@ const attachHandlers = (ws: WebSocket) => {
   };
 
   ws.onerror = () => {
-    // onerror почти бесполезен → инициируем close,
-    // чтобы гарантированно попасть в onclose
+    // onerror почти бесполезен → инициируем close, чтобы гарантированно попасть в onclose
     ws.close();
   };
 };
@@ -109,7 +160,7 @@ export const sendWSRequest = <TResponse>(
   // Регистрируем ожидание ответа в сторе
   const promise = useWSRequestStore.getState().trackRequest<TResponse>(request_uid);
 
-  // 2. Проверяем состояние
+  // Проверяем состояние сокета перед отправкой
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     logQueuedMessage(message);
     requestQueue.push(message);
@@ -138,9 +189,9 @@ const scheduleReconnect = () => {
 };
 
 export const connectWS = (accessToken: string) => {
-  // защита от лишних connect
-  console.log("accessTOken from connectWS: ", accessToken);
+  console.log("accessToken from connectWS: ", accessToken);
 
+  // Защита от дублирующих подключений
   if (
     socket &&
     currentToken === accessToken &&
@@ -160,7 +211,8 @@ export const connectWS = (accessToken: string) => {
     socket = null;
   }
 
-  const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}/ws/chat?authorization=${accessToken}`;
+  // Финальный чистый URL. Авторизация пойдет через HttpOnly куку ws_access_token.
+  const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}/ws/chat`;
   socket = new WebSocket(wsUrl);
 
   attachHandlers(socket);
@@ -176,8 +228,12 @@ export const disconnectWS = () => {
     socket = null;
   }
 
-  currentToken = null;
+  if (activityPingInterval) {
+    clearInterval(activityPingInterval);
+    activityPingInterval = null;
+  }
 
+  currentToken = null;
   status = "closed";
 };
 
