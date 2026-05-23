@@ -14,21 +14,36 @@ export const logout = async (options?: { broadcast?: boolean }) => {
   // 1. Ставим метку выхода в офлайне
   localStorage.setItem("isLoggedOut", "true");
 
-  // 2. Стучим в новый API эндпоинт бэкенда для очистки HttpOnly cookies (Пункт 3 требований)
-  // Делаем это ДО закрытия сокета и очистки стейтов, чтобы токен авторизации еще был доступен
+  // 2. Достаем токен для авторизации запроса логаута
+  const accessToken = useAuthStore.getState().accessToken;
+
+  // 3. Стучим в API эндпоинт бэкенда напрямую (без прокси)
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-    // Отправляем credentials, чтобы браузер прикрепил куки к запросу
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (accessToken && accessToken !== "null") {
+      headers["Authorization"] = `Bearer ${accessToken}`;
+    }
+
+    // Ждем ответа бэка, чтобы браузер успел обработать удаление его HttpOnly кук
     await fetch(`${apiUrl}/api/v1/auth/logout/`, {
       method: "POST",
-      credentials: "include",
+      headers: headers,
+      credentials: "include", // Обязательно для передачи и удаления HttpOnly кук
+      body: JSON.stringify({}),
     });
+
     console.log("Backend auth cookie cleared. 🍪");
   } catch (error) {
-    console.error("Failed to call backend logout endpoint:", error);
+    // Если у бэка CORS или 500 — try/catch гасит ошибку, продолжая очистку на клиенте
+    console.warn("Backend logout failed or CORS blocked it, continuing client cleanup...", error);
   }
 
-  // 3. Чистим стейты (синхронно)
+  // 4. Чистим стейты фронтенда
   useAuthStore.getState().clearAccessToken();
   useUserStore.getState().reset();
   useChatListStore.getState().reset();
@@ -36,13 +51,18 @@ export const logout = async (options?: { broadcast?: boolean }) => {
   useContactStore.getState().reset();
   getQueryClient().clear();
 
+  document.cookie = "accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+  document.cookie = "is_filled=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+
+  // Дополнительно страхуемся очисткой localStorage
+  localStorage.removeItem("is_filled");
+
   if (broadcast) broadcastLogout();
 
-  // 4. Закрываем WebSocket соединение и очищаем интервалы пинга
+  // 6. Закрываем WebSocket соединение
   disconnectWS();
 
-  // 5. РЕДИРЕКТ С ПРОВЕРКОЙ
-  // Если мы уже на странице авторизации, НЕ ПЕРЕЗАГРУЖАЕМ её
+  // 7. РЕДИРЕКТ С ПРОВЕРКОЙ
   if (!window.location.pathname.startsWith("/auth")) {
     window.location.href = "/auth/";
   }
