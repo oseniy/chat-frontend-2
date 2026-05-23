@@ -61,6 +61,7 @@ export const WSProvider = ({ children }: { children: React.ReactNode }) => {
       userIdExtractedRef.current = false;
     }
 
+    // Если токен есть, и он РЕАЛЬНО изменился — подключаем сокет
     if (accessToken) {
       if (prevTokenRef.current !== accessToken) {
         connectWS(accessToken);
@@ -70,7 +71,12 @@ export const WSProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    if (accessToken === null && prevTokenRef.current) {
+    // ИСПРАВЛЕНО: Отключаем веб-сокет только в том случае, если accessToken стал null
+    // И при этом в localStorage висит флаг, что пользователь нажал ЛОГАУТ.
+    // Если флага нет — значит, это кратковременный фоновый рефреш, сокет рубить НЕ НАДО!
+    const isLoggedOut = localStorage.getItem("isLoggedOut") === "true";
+
+    if (accessToken === null && prevTokenRef.current && isLoggedOut) {
       disconnectWS();
       prevTokenRef.current = null;
       userIdExtractedRef.current = false;
