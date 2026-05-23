@@ -1,6 +1,7 @@
 // wsClient.ts
 import { v4 as uuidv4 } from "uuid";
 
+import { useAuthStore } from "../store"; // Укажите правильный относительный путь к Zustand-стору
 import { QueuedRequest, WSBaseResponse, WSHandler, WSStatus } from "./model/types";
 import { useWSRequestStore } from "./model/wsRequest.store";
 import { logIncomingMessage, logOutgoingMessage, logQueuedMessage } from "./wsLogger";
@@ -13,6 +14,8 @@ let requestQueue: QueuedRequest[] = [];
 let reconnectAttempts = 0;
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let manualClose = false;
+
+let activityPingInterval: ReturnType<typeof setInterval> | null = null;
 
 const MAX_RECONNECT_DELAY = 30_000;
 
@@ -47,37 +50,78 @@ const drainQueue = () => {
 };
 
 const attachHandlers = (ws: WebSocket) => {
+  // Функция управления регулярным пингом
+  const startActivityPingTimer = () => {
+    if (activityPingInterval) {
+      clearInterval(activityPingInterval);
+    }
+
+    activityPingInterval = setInterval(() => {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ action: "ping" }));
+    }, 20_000); // Строго 20 секунд по ТЗ бэкенда
+  };
+
   ws.onopen = () => {
-    console.log("WS connected ✅");
+    console.log("Веб-сокет успешно подключен ✅");
     status = "connected";
     reconnectAttempts = 0;
     clearReconnectTimeout();
+
+    // Мгновенный пинг при открытии, чтобы сессия не сгорела сразу
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ action: "ping" }));
+      console.log("Первичный пинг отправлен мгновенно ⚡");
+    }
+
+    // Запуск регулярного таймера (раз в 20 секунд)
+    startActivityPingTimer();
+
     drainQueue();
   };
 
   ws.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data) as WSBaseResponse<unknown>;
+
+      // Любой пакет от сервера продлевает keep-alive
+      startActivityPingTimer();
+
       logIncomingMessage(data);
       handlers.forEach((handler) => handler(data));
     } catch {
-      console.warn("WS raw message:", event.data);
+      console.warn("Получено сырое сообщение WS:", event.data);
     }
   };
 
   ws.onclose = (event) => {
-    console.log("WS closed ❌", event.code, event.reason);
+    console.log("Веб-сокет закрыт ❌ Код:", event.code, "Причина:", event.reason);
     socket = null;
+
+    if (activityPingInterval) {
+      clearInterval(activityPingInterval);
+      activityPingInterval = null;
+    }
 
     if (manualClose) {
       status = "closed";
+      console.log(
+        "Соединение закрыто вручную через выход из аккаунта. Переподключение не требуется.",
+      );
       return;
     }
 
-    if (!navigator.onLine) {
-      status = "reconnecting";
-      scheduleReconnect();
+    // Код 4004 = деактивация или удаление аккаунта
+    if (event.code === 4004) {
+      status = "closed";
+      console.warn("Аккаунт деактивирован на сервере. Сбрасываем токены...");
+      useAuthStore.getState().clearAccessToken();
       return;
+    }
+
+    // Код 4000 = закрытие старого соединения сервером по таймауту неактивности
+    if (event.code === 4000) {
+      console.log("Сервер закрыл устаревшее соединение. Запускаем переподключение...");
     }
 
     status = "reconnecting";
@@ -85,8 +129,7 @@ const attachHandlers = (ws: WebSocket) => {
   };
 
   ws.onerror = () => {
-    // onerror почти бесполезен → инициируем close,
-    // чтобы гарантированно попасть в onclose
+    console.error("Произошла ошибка веб-сокета. Принудительно закрываем для перезапуска.");
     ws.close();
   };
 };
@@ -97,7 +140,6 @@ export const sendWSRequest = <TResponse>(
   requestUid?: string,
 ): Promise<TResponse> => {
   const socket = getSocket();
-
   const request_uid = requestUid || uuidv4();
 
   const message = {
@@ -106,10 +148,8 @@ export const sendWSRequest = <TResponse>(
     object: payload,
   };
 
-  // Регистрируем ожидание ответа в сторе
   const promise = useWSRequestStore.getState().trackRequest<TResponse>(request_uid);
 
-  // 2. Проверяем состояние
   if (!socket || socket.readyState !== WebSocket.OPEN) {
     logQueuedMessage(message);
     requestQueue.push(message);
@@ -123,29 +163,38 @@ export const sendWSRequest = <TResponse>(
 };
 
 const scheduleReconnect = () => {
-  console.log("currentToken from connectWS: ", currentToken);
-  if (!currentToken) return;
+  console.log("Текущий токен для проверки реконнекта: ", currentToken);
+
+  if (!currentToken || currentToken === "null" || localStorage.getItem("isLoggedOut") === "true") {
+    console.warn("Переподключение отменено: пользователь вышел из системы.");
+    return;
+  }
 
   clearReconnectTimeout();
 
   const delay = getReconnectDelay();
-  console.log(`WS reconnect in ${delay}ms`);
+  console.log(`Повторное подключение к WS через ${delay} мс`);
 
   reconnectTimeout = setTimeout(() => {
     reconnectAttempts += 1;
-    connectWS(currentToken!);
+    if (currentToken && currentToken !== "null") {
+      connectWS(currentToken);
+    }
   }, delay);
 };
 
 export const connectWS = (accessToken: string) => {
-  // защита от лишних connect
-  console.log("accessTOken from connectWS: ", accessToken);
+  console.log("Вызов connectWS с токеном: ", accessToken);
 
+  // Защита от дублирующих подключений (React Strict Mode)
   if (
     socket &&
     currentToken === accessToken &&
     (status === "connecting" || status === "connected")
   ) {
+    console.warn(
+      "Соединение WS уже открыто или подключается с этим токеном. Пропускаем перезапуск.",
+    );
     return;
   }
 
@@ -155,18 +204,23 @@ export const connectWS = (accessToken: string) => {
 
   clearReconnectTimeout();
 
-  if (socket) {
+  // Закрываем сокет только если токен реально изменился на другой
+  if (socket && currentToken !== accessToken) {
+    console.log("Токен изменился. Закрываем старое соединение.");
     socket.close();
     socket = null;
   }
 
-  const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}/ws/chat?authorization=${accessToken}`;
-  socket = new WebSocket(wsUrl);
-
-  attachHandlers(socket);
+  if (!socket) {
+    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL}/ws/chat`;
+    console.log("Инициализируем новое WebSocket соединение по адресу:", wsUrl);
+    socket = new WebSocket(wsUrl);
+    attachHandlers(socket);
+  }
 };
 
 export const disconnectWS = () => {
+  console.log("Вызвана функция disconnectWS. Отключаем сокет вручную.");
   manualClose = true;
   clearReconnectTimeout();
   requestQueue = [];
@@ -176,8 +230,12 @@ export const disconnectWS = () => {
     socket = null;
   }
 
-  currentToken = null;
+  if (activityPingInterval) {
+    clearInterval(activityPingInterval);
+    activityPingInterval = null;
+  }
 
+  currentToken = null;
   status = "closed";
 };
 

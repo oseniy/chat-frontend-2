@@ -7,7 +7,10 @@ interface CustomConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
-export const getApiClient = axios.create(API_CONFIG);
+export const getApiClient = axios.create({
+  ...API_CONFIG,
+  withCredentials: true,
+});
 
 let isRefreshing = false;
 let failedQueue: Array<{
@@ -27,10 +30,7 @@ const processQueue = (error: Error | null, token: string | null = null) => {
 getApiClient.interceptors.request.use(async (config) => {
   const state = useAuthStore.getState();
 
-  // Если приложение еще не инициализировано (идет первый рефреш)
-  // заставляем запрос подождать
   if (!state.isInitialized) {
-    // Ждем, пока флаг изменится
     await new Promise<void>((resolve) => {
       const unsubscribe = useAuthStore.subscribe((newState) => {
         if (newState.isInitialized) {
@@ -41,7 +41,6 @@ getApiClient.interceptors.request.use(async (config) => {
     });
   }
 
-  // Теперь берем актуальный токен
   const token = useAuthStore.getState().accessToken;
   if (token) {
     config.headers ??= new AxiosHeaders();
@@ -77,9 +76,12 @@ getApiClient.interceptors.response.use(
     isRefreshing = true;
 
     try {
-      const res = await fetch("/api/refresh-token", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const refreshUrl = `${apiUrl}/api/v1/auth/login/refresh/token/`;
+
+      const res = await fetch(refreshUrl, {
         method: "POST",
-        credentials: "include", // важно для httpOnly cookie
+        credentials: "include",
       });
 
       if (!res.ok) throw new Error("Refresh failed");

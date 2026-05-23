@@ -63,9 +63,15 @@ export const useFlashCall = () => {
                   access: string;
                   refresh: string;
                   is_filled: boolean;
-                }>(`/api/v1/auth/providers/plusofon/flash-call/claim/${session_uid}/`, {
-                  session_secret,
-                });
+                }>(
+                  `/api/v1/auth/providers/plusofon/flash-call/claim/${session_uid}/`,
+                  {
+                    session_secret,
+                  },
+                  {
+                    withCredentials: true,
+                  },
+                );
 
                 const tokens = claimRes.data;
 
