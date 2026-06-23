@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
 import { onAuthChannelMessage } from "../api/authChannel";
@@ -16,59 +16,86 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children, initialToken }: AuthProviderProps) => {
   const pathname = usePathname();
-  const router = useRouter();
-  const setAccessToken = useAuthStore((s) => s.setAccessToken);
-  const finishInitialization = useAuthStore((s) => s.finishInitialization);
-  const isInitialized = useAuthStore((s) => s.isInitialized);
+
+  const { setAccessToken, clearAccessToken, finishInitialization, isInitialized } = useAuthStore();
   const initialized = useRef(false);
 
   useEffect(() => {
-    return onAuthChannelMessage(async (msg) => {
+    return onAuthChannelMessage((msg) => {
       if (msg.type === "logout") {
-        await logout({ broadcast: false });
-        router.push("/auth");
+        // В продакшене не используем await для broadcast
+        logout({ broadcast: false });
       }
       if (msg.type === "login") {
         router.refresh();
       }
     });
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
 
     const initAuth = async () => {
+      const isLoggedOutFlag = localStorage.getItem("isLoggedOut") === "true";
+      const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
+
+      // 1. БЛОКИРОВКА ОФЛАЙН-ВЫХОДА (Для продакшена)
+      if (isLoggedOutFlag) {
+        // Синхронно чистим всё
+        clearAccessToken();
+        localStorage.removeItem("isLoggedOut");
+
+        // Отправляем запрос фоном, результат не важен
+        fetch("/api/logout", { method: "POST", credentials: "include" }).catch(() => {});
+
+        if (!isPublicRoute) {
+          window.location.replace("/auth/phone");
+          return;
+        }
+        finishInitialization();
+        return;
+      }
+
+      // 2. ЕСЛИ МЫ НА ПУБЛИЧНОЙ СТРАНИЦЕ
+      if (isPublicRoute) {
+        finishInitialization();
+        return;
+      }
+
+      // 3. ОБЫЧНАЯ ЛОГИКА
       if (initialToken) {
         setAccessToken(initialToken);
         finishInitialization();
       } else {
-        const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
-        if (!isPublicRoute) {
-          try {
-            const res = await fetch("/api/refresh-token", {
-              method: "POST",
-              credentials: "include",
-            });
-            if (res.ok) {
-              const data = await res.json();
-              setAccessToken(data.access);
-            }
-          } catch (e) {
-            console.error("Client-side hydration refresh failed", e);
+        try {
+          const res = await fetch("/api/refresh-token", {
+            method: "POST",
+            credentials: "include",
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAccessToken(data.access);
+            finishInitialization();
+          } else {
+            window.location.replace("/auth/phone");
           }
-          // Вызываем finishInitialization только после попытки refresh
-          finishInitialization();
-        } else {
-          finishInitialization();
+        } catch (e) {
+          console.error("Refresh failed", e);
+          window.location.replace("/auth/phone");
         }
       }
     };
 
     initAuth();
-  }, [initialToken, setAccessToken, finishInitialization, pathname]);
+  }, [initialToken, pathname, setAccessToken, clearAccessToken, finishInitialization]);
+
+  // Защитный рендер для продакшена
   if (!isInitialized) {
-    if (!initialToken) return null;
+    const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname?.startsWith(route));
+    // На логине показываем контент сразу, в чате — ждем инициализацию
+    if (isPublicRoute) return <>{children}</>;
+    return null;
   }
 
   return <>{children}</>;
